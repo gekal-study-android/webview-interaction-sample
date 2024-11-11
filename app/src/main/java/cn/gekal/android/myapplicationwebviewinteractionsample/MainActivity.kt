@@ -22,6 +22,6 @@ class MainActivity : ComponentActivity() {
         webView.loadUrl("https://gekal-study-android.github.io/webview-interaction-sample/index.html")
 
         // WebView内でJavaScriptの関数を呼び出す
-        webView.evaluateJavascript("javascript: showToast('Hello from Android!')", null)
+        webView.evaluateJavascript("javascript: handleReturnValue('Hello from Android!')", null)
     }
 }

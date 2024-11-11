@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>WebView Example</title>
 </head>
+
 <body>
     <h1>WebView Example</h1>
     <button onclick="showToast()">Show Toast</button>
+
+    <p id="message">message</p>
 
     <script type="text/javascript">
         function showToast() {
             AndroidInterface.showToast("Hello from WebView!");
         }
+
+        function handleReturnValue(value) {
+            document.getElementById("message").innerText = "Received: " + value;
+        }
     </script>
 </body>
+
 </html>
