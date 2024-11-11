@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My ApplicationWebview Interaction Sample"
+rootProject.name = "Webview Interaction Sample"
 include(":app")
