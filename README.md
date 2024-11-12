@@ -4,4 +4,4 @@
 
 /docs/index.html
 
-<https://gekal-study-android.github.io/webview-interaction-sample/iindex.html>
+<https://gekal-study-android.github.io/webview-interaction-sample/index.html>
