@@ -48,6 +48,7 @@ fun myApplicationWebviewInteractionSampleTheme(
       }
 
       darkTheme -> DarkColorScheme
+
       else -> LightColorScheme
     }
 
