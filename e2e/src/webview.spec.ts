@@ -15,10 +15,12 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('should be able to run tests', async ({ page }) => {
+test('should be able to run tests', async ({ page }, testInfo) => {
   await page.goto(process.env.WEBVIEW_URL);
+  await page.screenshot({ path: `test-results/screenshots/${testInfo.title}/${testInfo.project.name}/after-loading.png` });
 
   await page.locator('button[onclick="showToast()"]').click();
+  await page.screenshot({ path: `test-results/screenshots/${testInfo.title}/${testInfo.project.name}/after-click.png` });
 
   await page
     .locator('#message')
