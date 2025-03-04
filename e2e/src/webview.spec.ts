@@ -25,5 +25,5 @@ test('should be able to run tests', async ({ page }, testInfo) => {
   await page
     .locator('#message')
     .innerText()
-    .then((message) => expect(message).toBe('Received: Hello from Mocked!-fail'));
+    .then((message) => expect(message).toBe('Received: Hello from Mocked!'));
 });
