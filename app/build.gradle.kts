@@ -1,8 +1,11 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.appdistribution)
 }
 
 android {
@@ -22,6 +25,9 @@ android {
   buildTypes {
     release {
       isMinifyEnabled = false
+      firebaseAppDistribution {
+        groups = "gekal"
+      }
       proguardFiles(
         getDefaultProguardFile("proguard-android-optimize.txt"),
         "proguard-rules.pro",
