@@ -39,3 +39,6 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Google Service
+google-services.json
