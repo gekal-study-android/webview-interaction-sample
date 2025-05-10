@@ -1,5 +1,4 @@
 import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
-import org.gradle.internal.impldep.org.joda.time.LocalDateTime
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,7 +39,7 @@ android {
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")
       val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())
-      versionNameSuffix = "-release-${buildTime}"
+      versionNameSuffix = "-release-$buildTime"
       firebaseAppDistribution {
         groups = "gekal"
       }
