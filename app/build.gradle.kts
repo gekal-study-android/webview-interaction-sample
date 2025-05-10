@@ -1,4 +1,8 @@
 import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+import org.gradle.internal.impldep.org.joda.time.LocalDateTime
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 plugins {
   alias(libs.plugins.android.application)
@@ -22,9 +26,21 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  signingConfigs {
+    create("release") {
+      storeFile = file("debug.jks")
+      storePassword = "123456"
+      keyAlias = "samle-sign-alias"
+      keyPassword = "123456"
+    }
+  }
+
   buildTypes {
     release {
       isMinifyEnabled = false
+      signingConfig = signingConfigs.getByName("release")
+      val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())
+      versionNameSuffix = "-release-${buildTime}"
       firebaseAppDistribution {
         groups = "gekal"
       }
