@@ -15,7 +15,10 @@ keytool -genkeypair \
   -keyalg RSA \
   -keysize 2048 \
   -validity 10000 \
-  -alias samle-sign-alias
+  -alias samle-sign-alias \
+  -storepass 123456 \
+  -keypass 123456 \
+  -dname "CN=gekal, OU=Development, O=Gekal Inc., L=Chiba, ST=Chiba, C=JP"
 ```
 
 ## App Distribution
