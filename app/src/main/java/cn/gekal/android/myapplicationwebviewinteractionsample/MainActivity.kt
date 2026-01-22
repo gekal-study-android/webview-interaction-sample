@@ -15,6 +15,8 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
 
+    WebView.setWebContentsDebuggingEnabled(true);
+
     webView = findViewById(R.id.webView)
     webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
     webView.settings.javaScriptEnabled = true
