@@ -1,8 +1,8 @@
 import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.android.application)
@@ -36,10 +36,18 @@ android {
 
   buildTypes {
     debug {
-      buildConfigField("String", "WEBVIEW_URL", "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=debug\"")
+      buildConfigField(
+        "String",
+        "WEBVIEW_URL",
+        "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=debug\"",
+      )
     }
     release {
-      buildConfigField("String", "WEBVIEW_URL", "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=release\"")
+      buildConfigField(
+        "String",
+        "WEBVIEW_URL",
+        "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=release\"",
+      )
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")
       val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())

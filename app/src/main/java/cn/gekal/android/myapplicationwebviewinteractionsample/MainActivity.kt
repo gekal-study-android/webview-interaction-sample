@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun MainScreen() {
+private fun MainScreen() {
   var isError by remember { mutableStateOf(false) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
@@ -62,7 +62,7 @@ fun MainScreen() {
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .systemBarsPadding()
+      .systemBarsPadding(),
   ) {
     AndroidView(
       modifier = Modifier.fillMaxSize(),
@@ -70,7 +70,7 @@ fun MainScreen() {
         WebView(context).apply {
           layoutParams = ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            ViewGroup.LayoutParams.MATCH_PARENT,
           )
           WebView.setWebContentsDebuggingEnabled(true)
           settings.cacheMode = WebSettings.LOAD_NO_CACHE
@@ -80,7 +80,7 @@ fun MainScreen() {
             override fun onReceivedError(
               view: WebView?,
               request: WebResourceRequest?,
-              error: WebResourceError?
+              error: WebResourceError?,
             ) {
               super.onReceivedError(view, request, error)
               if (request?.isForMainFrame == true) {
@@ -92,7 +92,7 @@ fun MainScreen() {
             override fun onReceivedHttpError(
               view: WebView?,
               request: WebResourceRequest?,
-              errorResponse: WebResourceResponse?
+              errorResponse: WebResourceResponse?,
             ) {
               super.onReceivedHttpError(view, request, errorResponse)
               if (request?.isForMainFrame == true) {
@@ -104,7 +104,7 @@ fun MainScreen() {
             override fun onReceivedSslError(
               view: WebView?,
               handler: SslErrorHandler?,
-              error: SslError?
+              error: SslError?,
             ) {
               isError = true
               handler?.cancel()
@@ -112,14 +112,14 @@ fun MainScreen() {
             }
           }
 
-          addJavascriptInterface(AndroidJavaScriptInterface(context, this), "AndroidInterface")
+          addJavascriptInterface(JavaScriptInterface(context, this), "AndroidInterface")
           loadUrl(targetUrl)
           webViewInstance = this
         }
       },
       update = {
         it.visibility = if (isError) android.view.View.GONE else android.view.View.VISIBLE
-      }
+      },
     )
 
     if (isError) {
@@ -132,18 +132,18 @@ fun MainScreen() {
 }
 
 @Composable
-fun ErrorView(onRetry: () -> Unit) {
+private fun ErrorView(onRetry: () -> Unit) {
   Column(
     modifier = Modifier
       .fillMaxSize()
       .background(Color.White),
     horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
+    verticalArrangement = Arrangement.Center,
   ) {
     Text(
       text = "ネットワークエラーが発生しました",
       color = Color.Red,
-      fontSize = 18.sp
+      fontSize = 18.sp,
     )
     Spacer(modifier = Modifier.height(16.dp))
     Button(onClick = onRetry) {
