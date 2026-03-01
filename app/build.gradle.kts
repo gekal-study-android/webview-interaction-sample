@@ -11,6 +11,9 @@ plugins {
   alias(libs.plugins.firebase.appdistribution)
 }
 
+val variantsConfigFile = file("../variants-config.json")
+val variantsConfig = groovy.json.JsonSlurper().parse(variantsConfigFile) as Map<String, Any>
+
 android {
   namespace = "cn.gekal.android.myapplicationwebviewinteractionsample"
   compileSdk = 36
@@ -35,25 +38,28 @@ android {
   }
 
   buildTypes {
+    val debugConfig = variantsConfig["debug"] as Map<String, Any>
     debug {
       buildConfigField(
         "String",
         "WEBVIEW_URL",
-        "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=debug\"",
+        "\"${debugConfig["webview_url"]}\"",
       )
     }
+
+    val releaseConfig = variantsConfig["release"] as Map<String, Any>
     release {
       buildConfigField(
         "String",
         "WEBVIEW_URL",
-        "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=release\"",
+        "\"${releaseConfig["webview_url"]}\"",
       )
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")
       val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())
       versionNameSuffix = "-release-$buildTime"
       firebaseAppDistribution {
-        groups = "gekal"
+        groups = releaseConfig["firebase_app_distribution_groups"] as String
       }
       proguardFiles(
         getDefaultProguardFile("proguard-android-optimize.txt"),
