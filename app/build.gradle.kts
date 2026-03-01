@@ -106,7 +106,7 @@ spotless {
       mapOf(
         "ktlint_experimental" to "enabled",
         "standard:no-wildcard-imports" to "disabled",
-        "standard:function-naming" to "disabled",
+        "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
       ),
     )
   }
