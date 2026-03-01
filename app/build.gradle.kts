@@ -2,6 +2,7 @@ import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.android.application)
@@ -13,12 +14,12 @@ plugins {
 
 android {
   namespace = "cn.gekal.android.myapplicationwebviewinteractionsample"
-  compileSdk = 35
+  compileSdk = 36
 
   defaultConfig {
     applicationId = "cn.gekal.android.myapplicationwebviewinteractionsample"
     minSdk = 34
-    targetSdk = 34
+    targetSdk = 36
     versionCode = 1
     versionName = "1.0"
 
@@ -53,11 +54,15 @@ android {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
-  kotlinOptions {
-    jvmTarget = "17"
-  }
+
   buildFeatures {
     compose = true
+  }
+}
+
+kotlin {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_17)
   }
 }
 
