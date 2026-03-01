@@ -93,17 +93,6 @@ fun MainScreen() {
               }
             }
 
-            @Deprecated("Deprecated in Java")
-            override fun onReceivedError(
-              view: WebView?,
-              errorCode: Int,
-              description: String?,
-              failingUrl: String?
-            ) {
-              super.onReceivedError(view, errorCode, description, failingUrl)
-              isError = true
-            }
-
             override fun onReceivedHttpError(
               view: WebView?,
               request: WebResourceRequest?,
