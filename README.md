@@ -14,6 +14,51 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 - `docs/`: GitHub Pages で公開されている Web コンテンツ。
 - `e2e/`: Playwright を使用したエンドツーエンドテスト。
 
+## ローカル開発の準備
+
+ビルドには Firebase の設定ファイルが必要です。Firebase CLI を使用して最新の設定を取得できます。
+
+### 必要なファイルの取得と配置
+
+#### 1. Firebase CLI のセットアップ
+Firebase CLI がインストールされていない場合は、以下のコマンドでインストールし、ログインしてください。
+
+```shell
+curl -sL https://firebase.tools | bash
+firebase login
+```
+
+#### 2. google-services.json の取得
+Firebase CLI の `apps:sdkconfig` コマンドを使用して、Android アプリの設定を取得します。
+
+```shell
+# プロジェクト ID を指定して設定を表示
+# アプリケーション ID: cn.gekal.android.myapplicationwebviewinteractionsample
+firebase apps:sdkconfig ANDROID --project webview-interaction-sample > app/google-services.json
+```
+
+※ `<YOUR_PROJECT_ID>` は Firebase コンソールで確認できるプロジェクト ID に置き換えてください。出力された内容が JSON 形式でない場合は、手動で整形するか Firebase コンソールから直接ダウンロードしてください。
+
+#### 3. google-credentials.json (Firebase App Distribution 用)
+このファイルは Google Cloud のサービスアカウントキーです。セキュリティ上の理由から CLI で直接「取得」はできませんが、新しく作成することは可能です。
+
+```shell
+# サービスアカウントキーの作成（権限がある場合）
+gcloud iam service-accounts keys create google-credentials.json \
+    --iam-account=firebase-app-distribution@<YOUR_PROJECT_ID>.iam.gserviceaccount.com
+```
+
+### 設定状況の確認 (GitHub)
+GitHub Actions で使用されているシークレットや変数の名前を確認するには、GitHub CLI (`gh`) を使用します。
+
+```shell
+# Secrets の一覧を確認 (値の取得は不可)
+gh secret list --repo gekal-study-android/webview-interaction-sample --env application
+
+# Variables の一覧を確認
+gh variable list --repo gekal-study-android/webview-interaction-sample --env application
+```
+
 ## Web 側 (GitHub Pages)
 
 WebView が読み込むコンテンツは以下で公開されています。
