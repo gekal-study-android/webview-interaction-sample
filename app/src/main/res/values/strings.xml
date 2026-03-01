@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Webview Interaction Sample</string>
+    <string name="error_network_msg">ネットワークエラーが発生しました</string>
+    <string name="retry">再試行</string>
 </resources>
