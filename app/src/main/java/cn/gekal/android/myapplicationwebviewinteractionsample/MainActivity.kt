@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun MainScreen() {
+fun MainScreen() {
   var isError by remember { mutableStateOf(false) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
@@ -132,7 +132,7 @@ private fun MainScreen() {
 }
 
 @Composable
-private fun ErrorView(onRetry: () -> Unit) {
+fun ErrorView(onRetry: () -> Unit) {
   Column(
     modifier = Modifier
       .fillMaxSize()

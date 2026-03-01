@@ -106,6 +106,7 @@ spotless {
       mapOf(
         "ktlint_experimental" to "enabled",
         "standard:no-wildcard-imports" to "disabled",
+        "standard:function-naming" to "disabled",
       ),
     )
   }
