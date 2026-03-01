@@ -126,7 +126,7 @@ fun MainScreen() {
             }
           }
 
-          addJavascriptInterface(JavaScriptInterface(context, this), "AndroidInterface")
+          addJavascriptInterface(AndroidJavaScriptInterface(context, this), "AndroidInterface")
           loadUrl("https://gekal-study-android.github.io/webview-interaction-sample/index.html")
           webViewInstance = this
         }
