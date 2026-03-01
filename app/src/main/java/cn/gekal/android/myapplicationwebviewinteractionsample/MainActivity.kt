@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.net.http.SslError
 import android.os.Bundle
-import android.view.View
+import android.view.ViewGroup
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -12,106 +12,155 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
 class MainActivity : ComponentActivity() {
-  private lateinit var webView: WebView
-  private lateinit var errorLayout: LinearLayout
-  private lateinit var retryButton: Button
-
-  @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_main)
-
-    val mainView = findViewById<View>(R.id.main)
-    ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
-      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-      insets
-    }
-
-    WebView.setWebContentsDebuggingEnabled(true);
-
-    webView = findViewById(R.id.webView)
-    errorLayout = findViewById(R.id.errorLayout)
-    retryButton = findViewById(R.id.retryButton)
-
-    retryButton.setOnClickListener {
-      errorLayout.visibility = View.GONE
-      webView.visibility = View.VISIBLE
-      webView.reload()
-    }
-
-    webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
-    webView.settings.javaScriptEnabled = true
-
-    webView.webViewClient = object : WebViewClient() {
-      override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-        super.onPageStarted(view, url, favicon)
-        // ページ読み込み開始時にエラー表示を隠す
-        errorLayout.visibility = View.GONE
-        webView.visibility = View.VISIBLE
-      }
-
-      override fun onReceivedError(
-        view: WebView?,
-        request: WebResourceRequest?,
-        error: WebResourceError?
-      ) {
-        super.onReceivedError(view, request, error)
-        // メインフレームのエラーのみハンドリング
-        if (request?.isForMainFrame == true) {
-          showError()
+    setContent {
+      MaterialTheme {
+        Surface(modifier = Modifier.fillMaxSize()) {
+          MainScreen()
         }
       }
-
-      @Deprecated("Deprecated in Java")
-      @Suppress("DEPRECATION")
-      override fun onReceivedError(
-        view: WebView?,
-        errorCode: Int,
-        description: String?,
-        failingUrl: String?
-      ) {
-        super.onReceivedError(view, errorCode, description, failingUrl)
-        showError()
-      }
-
-      override fun onReceivedHttpError(
-        view: WebView?,
-        request: WebResourceRequest?,
-        errorResponse: WebResourceResponse?
-      ) {
-        super.onReceivedHttpError(view, request, errorResponse)
-        // 404や500などのHTTPエラーもメインフレームならエラー画面を表示
-        if (request?.isForMainFrame == true) {
-          showError()
-        }
-      }
-
-      override fun onReceivedSslError(
-        view: WebView?,
-        handler: SslErrorHandler?,
-        error: SslError?
-      ) {
-        // SSL証明書エラー時もエラー画面を表示（デフォルトではキャンセルされる）
-        showError()
-      }
     }
-
-    webView.addJavascriptInterface(JavaScriptInterface(this, webView), "AndroidInterface")
-    webView.loadUrl("https://gekal-study-android.github.io/webview-interaction-sample/index.html")
   }
+}
 
-  private fun showError() {
-    errorLayout.visibility = View.VISIBLE
-    webView.visibility = View.GONE
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun MainScreen() {
+  var isError by remember { mutableStateOf(false) }
+  var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .systemBarsPadding()
+  ) {
+    AndroidView(
+      modifier = Modifier.fillMaxSize(),
+      factory = { context ->
+        WebView(context).apply {
+          layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+          )
+          WebView.setWebContentsDebuggingEnabled(true)
+          settings.cacheMode = WebSettings.LOAD_NO_CACHE
+          settings.javaScriptEnabled = true
+
+          webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+              super.onPageStarted(view, url, favicon)
+              isError = false
+            }
+
+            override fun onReceivedError(
+              view: WebView?,
+              request: WebResourceRequest?,
+              error: WebResourceError?
+            ) {
+              super.onReceivedError(view, request, error)
+              if (request?.isForMainFrame == true) {
+                isError = true
+              }
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onReceivedError(
+              view: WebView?,
+              errorCode: Int,
+              description: String?,
+              failingUrl: String?
+            ) {
+              super.onReceivedError(view, errorCode, description, failingUrl)
+              isError = true
+            }
+
+            override fun onReceivedHttpError(
+              view: WebView?,
+              request: WebResourceRequest?,
+              errorResponse: WebResourceResponse?
+            ) {
+              super.onReceivedHttpError(view, request, errorResponse)
+              if (request?.isForMainFrame == true) {
+                isError = true
+              }
+            }
+
+            override fun onReceivedSslError(
+              view: WebView?,
+              handler: SslErrorHandler?,
+              error: SslError?
+            ) {
+              isError = true
+            }
+          }
+
+          addJavascriptInterface(JavaScriptInterface(context, this), "AndroidInterface")
+          loadUrl("https://gekal-study-android.github.io/webview-interaction-sample/index.html")
+          webViewInstance = this
+        }
+      },
+      update = {
+        // WebViewの可視性を制御
+        it.visibility = if (isError) android.view.View.GONE else android.view.View.VISIBLE
+      }
+    )
+
+    if (isError) {
+      ErrorView(onRetry = {
+        isError = false
+        webViewInstance?.reload()
+      })
+    }
+  }
+}
+
+@Composable
+fun ErrorView(onRetry: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color.White),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center
+  ) {
+    Text(
+      text = "ネットワークエラーが発生しました",
+      color = Color.Red,
+      fontSize = 18.sp
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+    Button(onClick = onRetry) {
+      Text("再試行")
+    }
   }
 }
