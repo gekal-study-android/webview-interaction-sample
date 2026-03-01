@@ -79,7 +79,15 @@ fun MainScreen() {
           webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
               super.onPageStarted(view, url, favicon)
-              isError = false
+              // 読み込み開始時点ではエラーをリセットしない
+              // (onReceivedErrorの後に呼ばれる場合があるため、ここでは制御しない)
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+              super.onPageFinished(view, url)
+              // 正常に読み込みが完了した（かつエラーが発生していない）場合のみエラー表示を消す
+              // ただしWebView標準のエラーページが表示されるのを防ぐため、
+              // エラー発生時は即座にGONEにする運用にする
             }
 
             override fun onReceivedError(
@@ -90,6 +98,8 @@ fun MainScreen() {
               super.onReceivedError(view, request, error)
               if (request?.isForMainFrame == true) {
                 isError = true
+                // 標準のエラーページが表示されないように白紙などを読み込む
+                view?.loadUrl("about:blank")
               }
             }
 
@@ -101,6 +111,7 @@ fun MainScreen() {
               super.onReceivedHttpError(view, request, errorResponse)
               if (request?.isForMainFrame == true) {
                 isError = true
+                view?.loadUrl("about:blank")
               }
             }
 
@@ -110,6 +121,8 @@ fun MainScreen() {
               error: SslError?
             ) {
               isError = true
+              handler?.cancel()
+              view?.loadUrl("about:blank")
             }
           }
 
@@ -127,7 +140,8 @@ fun MainScreen() {
     if (isError) {
       ErrorView(onRetry = {
         isError = false
-        webViewInstance?.reload()
+        // 再試行時は元のURLを読み直す
+        webViewInstance?.loadUrl("https://gekal-study-android.github.io/webview-interaction-sample/index.html")
       })
     }
   }
