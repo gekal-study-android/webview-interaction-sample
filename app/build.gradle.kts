@@ -35,7 +35,11 @@ android {
   }
 
   buildTypes {
+    debug {
+      buildConfigField("String", "WEBVIEW_URL", "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=debug\"")
+    }
     release {
+      buildConfigField("String", "WEBVIEW_URL", "\"https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=release\"")
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")
       val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())
@@ -56,6 +60,7 @@ android {
 
   buildFeatures {
     compose = true
+    buildConfig = true
   }
 }
 
