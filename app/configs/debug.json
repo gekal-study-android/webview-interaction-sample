@@ -1,0 +1,4 @@
+{
+  "$schema": "./schema.json",
+  "webview_url": "https://gekal-study-android.github.io/webview-interaction-sample/index.html?env=debug"
+}

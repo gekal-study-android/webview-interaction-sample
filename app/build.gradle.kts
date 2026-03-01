@@ -11,8 +11,14 @@ plugins {
   alias(libs.plugins.firebase.appdistribution)
 }
 
-val variantsConfigFile = file("../variants-config.json")
-val variantsConfig = groovy.json.JsonSlurper().parse(variantsConfigFile) as Map<String, Any>
+fun readVariantConfig(variantName: String): Map<String, Any> {
+  val configFile = file("configs/$variantName.json")
+  return if (configFile.exists()) {
+    groovy.json.JsonSlurper().parse(configFile) as Map<String, Any>
+  } else {
+    emptyMap()
+  }
+}
 
 android {
   namespace = "cn.gekal.android.myapplicationwebviewinteractionsample"
@@ -38,28 +44,28 @@ android {
   }
 
   buildTypes {
-    val debugConfig = variantsConfig["debug"] as Map<String, Any>
     debug {
+      val config = readVariantConfig("debug")
       buildConfigField(
         "String",
         "WEBVIEW_URL",
-        "\"${debugConfig["webview_url"]}\"",
+        "\"${config["webview_url"]}\"",
       )
     }
 
-    val releaseConfig = variantsConfig["release"] as Map<String, Any>
     release {
+      val config = readVariantConfig("release")
       buildConfigField(
         "String",
         "WEBVIEW_URL",
-        "\"${releaseConfig["webview_url"]}\"",
+        "\"${config["webview_url"]}\"",
       )
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")
       val buildTime = SimpleDateFormat("yyyy-MM-dd-HH-mm", Locale.getDefault()).format(Date())
       versionNameSuffix = "-release-$buildTime"
       firebaseAppDistribution {
-        groups = releaseConfig["firebase_app_distribution_groups"] as String
+        groups = config["firebase_app_distribution_groups"] as? String ?: ""
       }
       proguardFiles(
         getDefaultProguardFile("proguard-android-optimize.txt"),

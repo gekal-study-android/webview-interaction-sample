@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Variant Configuration Schema",
+  "type": "object",
+  "properties": {
+    "webview_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "firebase_app_distribution_groups": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "webview_url"
+  ]
+}
