@@ -15,6 +15,9 @@ import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : ComponentActivity() {
   private lateinit var webView: WebView
@@ -23,8 +26,16 @@ class MainActivity : ComponentActivity() {
 
   @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
+    enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+
+    val mainView = findViewById<View>(R.id.main)
+    ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+      val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+      v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+      insets
+    }
 
     WebView.setWebContentsDebuggingEnabled(true);
 
