@@ -106,6 +106,34 @@ test('should expose the phone number as a tel: link', async ({ page }) => {
   await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('tel:+81312345678')).toBeVisible();
 });
 
+test.describe('リンクの種類', () => {
+  // ネイティブは shouldOverrideUrlLoading でこれらを受け取り、対応するアプリに渡す
+  const CASES: Array<[string, string]> = [
+    ['メールを作成', 'mailto:support@example.com?subject=WebView%20Interaction%20Sample'],
+    ['SMS を作成', 'sms:+81312345678?body=WebView%20Interaction%20Sample'],
+    ['地図で開く', 'geo:35.681236,139.767125?q=東京駅'],
+    [
+      '外部サイトを開く',
+      'https://developer.android.com/develop/ui/views/layout/webapps/webview',
+    ],
+  ];
+
+  for (const [label, href] of CASES) {
+    test(`should expose "${label}" as a link`, async ({ page }) => {
+      await openDemo(page);
+      await expect(page.getByRole('link', { name: new RegExp(label) })).toHaveAttribute('href', href);
+    });
+  }
+
+  test('should open only the external site in a new tab', async ({ page }) => {
+    await openDemo(page);
+
+    // WebView 内で遷移させないよう、外部サイトだけ target="_blank" にしている
+    await expect(page.getByRole('link', { name: /外部サイトを開く/ })).toHaveAttribute('target', '_blank');
+    await expect(page.getByRole('link', { name: /メールを作成/ })).not.toHaveAttribute('target', '_blank');
+  });
+});
+
 test.describe('ページの読み込み', () => {
   test('should ask the native side to reload the page', async ({ page }) => {
     await openDemo(page);

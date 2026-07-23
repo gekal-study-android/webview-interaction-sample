@@ -62,7 +62,7 @@ private const val BLANK_URL = "about:blank"
 private val WEB_SCHEMES = setOf("http", "https")
 
 /**
- * `tel:` などの URI を対応するアプリで開く。
+ * `tel:` / `mailto:` などの URI を対応するアプリで開く。
  *
  * 電話は [Intent.ACTION_DIAL]（ダイヤル画面を開くだけ）を使う。
  * [Intent.ACTION_CALL] は即座に発信してしまい `CALL_PHONE` 権限も必要になるため使わない。
@@ -70,6 +70,10 @@ private val WEB_SCHEMES = setOf("http", "https")
 private fun openWithExternalApp(context: Context, uri: Uri) {
   val intent = when (uri.scheme) {
     "tel" -> Intent(Intent.ACTION_DIAL, uri)
+
+    // メール / SMS は宛先付きの作成画面を開く
+    "mailto", "sms", "smsto" -> Intent(Intent.ACTION_SENDTO, uri)
+
     else -> Intent(Intent.ACTION_VIEW, uri)
   }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
@@ -144,6 +148,9 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
 
+  // 配信元のホスト。これ以外の http(s) は端末のブラウザで開く
+  val targetHost = remember(targetUrl) { Uri.parse(targetUrl).host }
+
   // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
@@ -174,15 +181,16 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
 
           webViewClient = object : WebViewClient() {
             /**
-             * `tel:` や `mailto:` は WebView が読み込めずエラーになるため、
-             * 端末のアプリ（電話・メールなど）に渡す。http(s) は今までどおり WebView で表示する。
+             * `tel:` や `mailto:` は WebView が読み込めずエラーになるため、端末のアプリに渡す。
+             * http(s) でも配信元と異なるホストは端末のブラウザで開く。
+             * WebView 内で遷移させると戻る手段がなく、デモページに戻れなくなるため。
              */
             override fun shouldOverrideUrlLoading(
               view: WebView?,
               request: WebResourceRequest?,
             ): Boolean {
               val uri = request?.url ?: return false
-              if (uri.scheme in WEB_SCHEMES) {
+              if (uri.scheme in WEB_SCHEMES && uri.host == targetHost) {
                 return false
               }
               openWithExternalApp(context, uri)
