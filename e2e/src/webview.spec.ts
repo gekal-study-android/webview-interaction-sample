@@ -131,7 +131,7 @@ test.describe('外部リンクの開き方', () => {
   const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
   const APP_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
   // TWA は自サイトを開く（assetlinks.json で検証できるのが自分のオリジンだけのため）
-  const OWN_SITE_URL = 'https://webview-interaction-sample.demo.gekal.cn/';
+  const OWN_SITE_URL = 'https://webview-interaction-sample.demo.gekal.cn/twa.html';
 
   // ボタンのラベル -> ネイティブに渡す ExternalOpenMode と URL
   const MODES: Array<[string, string, string]> = [
@@ -177,6 +177,38 @@ test.describe('外部リンクの開き方', () => {
 
     await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('window.open(')).toBeVisible();
     await (await popup)?.close();
+  });
+});
+
+test.describe('TWA 判定ページ', () => {
+  const twaUrl = () => WEBVIEW_URL.replace(/index\.html.*$/, 'twa.html');
+
+  test('should report that it is not running as a TWA in a browser', async ({ page }) => {
+    await page.goto(twaUrl());
+
+    // 通常のブラウザでは standalone でも android-app:// でもない
+    await expect(page.getByText('TWA としては表示されていません')).toBeVisible();
+    await expect(page.getByText('display-mode: standalone')).toBeVisible();
+    await expect(page.getByRole('link', { name: '/.well-known/assetlinks.json' })).toBeVisible();
+  });
+
+  test('should detect a TWA launch from the referrer and display mode', async ({ page }) => {
+    // TWA からの起動を模して、判定に使う 2 つの値を差し替える
+    await page.addInitScript(() => {
+      Object.defineProperty(document, 'referrer', {
+        get: () => 'android-app://cn.gekal.android.myapplicationwebviewinteractionsample',
+      });
+      const original = window.matchMedia.bind(window);
+      window.matchMedia = ((query: string) =>
+        query === '(display-mode: standalone)'
+          ? ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} } as any)
+          : original(query)) as typeof window.matchMedia;
+    });
+
+    await page.goto(twaUrl());
+
+    await expect(page.getByText('検証済みの TWA として表示中')).toBeVisible();
+    await expect(page.getByText('起動元: cn.gekal.android.myapplicationwebviewinteractionsample')).toBeVisible();
   });
 });
 
