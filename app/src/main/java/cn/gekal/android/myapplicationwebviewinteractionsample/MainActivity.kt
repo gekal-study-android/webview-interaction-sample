@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -22,6 +23,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsClient
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -47,19 +51,61 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
 
-/** エラー時に WebView を空にするための URL。 */
-private const val BLANK_URL = "about:blank"
+private const val TAG = "MainActivity"
 
-/** WebView 内で読み込むスキーム。これ以外は端末のアプリに渡す。 */
-private val WEB_SCHEMES = setOf("http", "https")
+/** [ContextWrapper] をたどって Activity を取り出す。 */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> baseContext.findActivity()
+  else -> null
+}
+
+/**
+ * 外部サイトを Custom Tabs（アプリ内ブラウザ）でアプリの上に重ねて開く。
+ *
+ * WebView 内に読み込むと URL が見えず、外部サイトだと分からないまま操作させてしまう。
+ * Custom Tabs なら接続先が URL バーに表示され、閉じれば元の画面に戻る。
+ * 対応ブラウザがない端末では通常のブラウザ起動にフォールバックする。
+ */
+private fun openInCustomTab(context: Context, uri: Uri, toolbarColor: Int) {
+  // Custom Tabs を描画するのはブラウザアプリ本体。対応ブラウザがない端末では
+  // CustomTabsIntent のエクストラが無視され、ただのブラウザ起動に「静かに」なる。
+  // 何が起きたか分かるよう、その場合はログとトーストで知らせる。
+  val provider = CustomTabsClient.getPackageName(context, null)
+  if (provider == null) {
+    Log.w(TAG, "Custom Tabs 対応ブラウザが見つかりません。通常のブラウザで開きます: $uri")
+    Toast.makeText(context, "Custom Tabs 対応ブラウザがないため、通常のブラウザで開きます", Toast.LENGTH_LONG).show()
+  }
+
+  val colors = CustomTabColorSchemeParams.Builder()
+    .setToolbarColor(toolbarColor)
+    .build()
+
+  val customTabsIntent = CustomTabsIntent.Builder()
+    .setDefaultColorSchemeParams(colors)
+    // ページタイトルを出して、どのサイトを見ているかを分かりやすくする
+    .setShowTitle(true)
+    .setUrlBarHidingEnabled(false)
+    .build()
+
+  try {
+    // Activity 以外の Context だと別タスクで開いてしまい、戻る導線がなくなる
+    customTabsIntent.launchUrl(context.findActivity() ?: context, uri)
+  } catch (e: ActivityNotFoundException) {
+    Log.w(TAG, "Custom Tabs を開けないためブラウザにフォールバックします: $uri", e)
+    openWithExternalApp(context, uri)
+  }
+}
 
 /**
  * `tel:` / `mailto:` などの URI を対応するアプリで開く。
@@ -68,19 +114,17 @@ private val WEB_SCHEMES = setOf("http", "https")
  * [Intent.ACTION_CALL] は即座に発信してしまい `CALL_PHONE` 権限も必要になるため使わない。
  */
 private fun openWithExternalApp(context: Context, uri: Uri) {
-  val intent = when (uri.scheme) {
-    "tel" -> Intent(Intent.ACTION_DIAL, uri)
-
-    // メール / SMS は宛先付きの作成画面を開く
-    "mailto", "sms", "smsto" -> Intent(Intent.ACTION_SENDTO, uri)
-
-    else -> Intent(Intent.ACTION_VIEW, uri)
-  }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+  val action = when (LinkPolicy.externalIntentFor(uri.scheme)) {
+    ExternalIntent.DIAL -> Intent.ACTION_DIAL
+    ExternalIntent.SEND_TO -> Intent.ACTION_SENDTO
+    ExternalIntent.VIEW -> Intent.ACTION_VIEW
+  }
+  val intent = Intent(action, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
   try {
     context.startActivity(intent)
   } catch (e: ActivityNotFoundException) {
-    Log.w("MainActivity", "この URI を開けるアプリがありません: $uri", e)
+    Log.w(TAG, "この URI を開けるアプリがありません: $uri", e)
     Toast.makeText(context, "対応するアプリが見つかりませんでした", Toast.LENGTH_SHORT).show()
   }
 }
@@ -97,16 +141,6 @@ enum class AppTheme {
     fun from(value: String): AppTheme =
       entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SYSTEM
   }
-}
-
-/** WebView の読み込み状態。 */
-sealed interface LoadState {
-  data object Loading : LoadState
-
-  data object Loaded : LoadState
-
-  /** メインフレームの読み込みに失敗した状態。[detail] は原因の概要。 */
-  data class Error(val detail: String) : LoadState
 }
 
 class MainActivity : ComponentActivity() {
@@ -144,19 +178,37 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
-  var loadState by remember { mutableStateOf<LoadState>(LoadState.Loading) }
+  var loadState by remember { mutableStateOf<LoadState>(LoadStateReducer.onLoadRequested()) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+  // null 以外のとき、この URL をアプリ内オーバーレイで表示する
+  var overlayUrl by remember { mutableStateOf<String?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
 
   // 配信元のホスト。これ以外の http(s) は端末のブラウザで開く
-  val targetHost = remember(targetUrl) { Uri.parse(targetUrl).host }
+  val targetHost = remember(targetUrl) { targetUrl.toUri().host }
+
+  val localContext = LocalContext.current
+  val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
+
+  // Custom Tabs のツールバーもアプリと同じ配色にして、アプリ内の表示だと分かるようにする
+  val toolbarColor = MaterialTheme.colorScheme.surface.toArgb()
 
   // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
-  val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
+  val currentOpenExternal by rememberUpdatedState<(String, ExternalOpenMode) -> Unit> { url, mode ->
+    val uri = url.toUri()
+    if (!LinkPolicy.isBrowsableUrl(uri.scheme)) {
+      Log.w(TAG, "ブラウザで開けない URL のため無視します: $url")
+      return@rememberUpdatedState
+    }
+    when (mode) {
+      ExternalOpenMode.IN_APP_OVERLAY -> overlayUrl = url
+      ExternalOpenMode.CUSTOM_TAB -> openInCustomTab(localContext, uri, toolbarColor)
+    }
+  }
 
   val startLoad: (String) -> Unit = { url ->
-    loadState = LoadState.Loading
+    loadState = LoadStateReducer.onLoadRequested()
     webViewInstance?.loadUrl(url)
   }
 
@@ -190,26 +242,34 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               request: WebResourceRequest?,
             ): Boolean {
               val uri = request?.url ?: return false
-              if (uri.scheme in WEB_SCHEMES && uri.host == targetHost) {
-                return false
+              when (LinkPolicy.resolve(uri.scheme, uri.host, targetHost)) {
+                Navigation.IN_WEB_VIEW -> return false
+                Navigation.CUSTOM_TAB -> openInCustomTab(context, uri, toolbarColor)
+                Navigation.EXTERNAL_APP -> openWithExternalApp(context, uri)
               }
-              openWithExternalApp(context, uri)
               return true
+            }
+
+            /** エラー画面を出すときは WebView を空にして、失敗したページを残さない。 */
+            private fun handleMainFrameError(
+              view: WebView?,
+              isForMainFrame: Boolean,
+              detail: String,
+            ) {
+              loadState = LoadStateReducer.onResourceError(loadState, isForMainFrame, detail)
+              if (isForMainFrame) {
+                view?.loadUrl(LoadStateReducer.BLANK_URL)
+              }
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
               super.onPageStarted(view, url, favicon)
-              // エラー後に読み込む about:blank は状態を変えない
-              if (url != BLANK_URL) {
-                loadState = LoadState.Loading
-              }
+              loadState = LoadStateReducer.onPageStarted(loadState, url)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
               super.onPageFinished(view, url)
-              if (url != BLANK_URL && loadState is LoadState.Loading) {
-                loadState = LoadState.Loaded
-              }
+              loadState = LoadStateReducer.onPageFinished(loadState, url)
             }
 
             override fun onReceivedError(
@@ -218,10 +278,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               error: WebResourceError?,
             ) {
               super.onReceivedError(view, request, error)
-              if (request?.isForMainFrame == true) {
-                loadState = LoadState.Error("${error?.description} (code: ${error?.errorCode})")
-                view?.loadUrl(BLANK_URL)
-              }
+              handleMainFrameError(
+                view,
+                request?.isForMainFrame == true,
+                LoadStateReducer.resourceErrorDetail(error?.description, error?.errorCode ?: 0),
+              )
             }
 
             override fun onReceivedHttpError(
@@ -230,13 +291,14 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               errorResponse: WebResourceResponse?,
             ) {
               super.onReceivedHttpError(view, request, errorResponse)
-              if (request?.isForMainFrame == true) {
-                loadState =
-                  LoadState.Error(
-                    "HTTP ${errorResponse?.statusCode} ${errorResponse?.reasonPhrase}",
-                  )
-                view?.loadUrl(BLANK_URL)
-              }
+              handleMainFrameError(
+                view,
+                request?.isForMainFrame == true,
+                LoadStateReducer.httpErrorDetail(
+                  errorResponse?.statusCode ?: 0,
+                  errorResponse?.reasonPhrase,
+                ),
+              )
             }
 
             override fun onReceivedSslError(
@@ -244,9 +306,12 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               handler: SslErrorHandler?,
               error: SslError?,
             ) {
-              loadState = LoadState.Error("SSL エラー (primaryError: ${error?.primaryError})")
               handler?.cancel()
-              view?.loadUrl(BLANK_URL)
+              handleMainFrameError(
+                view,
+                isForMainFrame = true,
+                detail = LoadStateReducer.sslErrorDetail(error?.primaryError ?: 0),
+              )
             }
           }
 
@@ -255,6 +320,7 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               context = context,
               webView = this,
               onAppThemeChanged = { currentOnAppThemeChanged(AppTheme.from(it)) },
+              onOpenExternal = { url, mode -> currentOpenExternal(url, mode) },
             ),
             "AndroidInterface",
           )
@@ -276,6 +342,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
       is LoadState.Loading -> LoadingView()
       is LoadState.Error -> ErrorView(detail = state.detail, onRetry = { startLoad(targetUrl) })
       is LoadState.Loaded -> Unit
+    }
+
+    // 外部サイトを現在の WebView の上に重ねて表示する
+    overlayUrl?.let { url ->
+      InAppBrowser(url = url, onClose = { overlayUrl = null })
     }
   }
 }
