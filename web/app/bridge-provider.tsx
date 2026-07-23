@@ -56,6 +56,7 @@ const KNOWN_METHODS: BridgeMethod[] = [
   'copyToClipboard',
   'shareText',
   'requestNativeCallback',
+  'setAppTheme',
 ];
 
 const timestamp = () =>

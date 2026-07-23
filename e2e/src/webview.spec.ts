@@ -27,9 +27,15 @@ test.beforeEach(async ({ page }) => {
           (window as any).onNativeEvent(JSON.stringify({ type: 'callback', requestId, message: 'Mocked callback' }));
         }, delayMillis);
       },
+      // ネイティブに通知された配色を検証できるよう記録しておく
+      setAppTheme: (theme: string) => {
+        (window as any).__appThemeCalls = [...((window as any).__appThemeCalls ?? []), theme];
+      },
     };
   });
 });
+
+const appThemeCalls = (page: Page) => page.evaluate(() => (window as any).__appThemeCalls ?? []);
 
 const openDemo = async (page: Page) => {
   await page.goto(WEBVIEW_URL);
@@ -78,4 +84,36 @@ test('should log every interaction between JS and native', async ({ page }) => {
   const log = page.getByRole('list', { name: 'イベントログ' });
   await expect(log.getByText("showToast('Hello from WebView!')")).toBeVisible();
   await expect(log.getByText("handleReturnValue('Hello from Mocked!')")).toBeVisible();
+});
+
+test.describe('カラーテーマ', () => {
+  const toggle = (page: Page) => page.getByRole('button', { name: 'カラーテーマを切り替える' });
+
+  test('should notify the native side of the initial color scheme', async ({ page }) => {
+    await openDemo(page);
+
+    // 初回マウント時点でネイティブに反映されていないと、システムバー周辺の色が食い違う
+    await expect.poll(() => appThemeCalls(page)).toEqual(['light']);
+  });
+
+  test.describe('システムがダークの場合', () => {
+    test.use({ colorScheme: 'dark' });
+
+    test('should switch on the first tap even when mode is still "system"', async ({ page }) => {
+      await openDemo(page);
+
+      // mode は 'system' のままだが、適用されている配色はダーク
+      await expect.poll(() => appThemeCalls(page)).toEqual(['dark']);
+      await expect(page.locator('html')).toHaveClass(/dark/);
+
+      // 初回タップでライトへ切り替わること（mode === 'dark' 判定だとここが反応しなかった）
+      await toggle(page).click();
+      await expect(page.locator('html')).toHaveClass(/light/);
+      await expect.poll(() => appThemeCalls(page)).toEqual(['dark', 'light']);
+
+      await toggle(page).click();
+      await expect(page.locator('html')).toHaveClass(/dark/);
+      await expect.poll(() => appThemeCalls(page)).toEqual(['dark', 'light', 'dark']);
+    });
+  });
 });

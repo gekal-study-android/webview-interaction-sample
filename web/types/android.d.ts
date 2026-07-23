@@ -28,6 +28,8 @@ declare global {
     shareText?: (text: string) => void;
     /** 指定ミリ秒後に `onNativeEvent` で非同期に応答させる。 */
     requestNativeCallback?: (requestId: string, delayMillis: number) => void;
+    /** ネイティブ側の配色を Web と揃える。`'light'` / `'dark'` / `'system'`。 */
+    setAppTheme?: (theme: 'light' | 'dark' | 'system') => void;
   }
 
   /** ネイティブから `onNativeEvent` に渡されるイベント。 */

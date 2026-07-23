@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { useColorScheme } from '@mui/material/styles';
 
 import { BridgeProvider, useBridge } from '../bridge-provider';
 import { AppHeader } from './app-header';
@@ -16,6 +18,25 @@ import { NativeCallbackCard } from './native-callback-card';
 import { SystemCard } from './system-card';
 import { TextSampleCard } from './text-sample-card';
 import { ToastCard } from './toast-card';
+
+/**
+ * Web の配色をネイティブ側にも反映させる。
+ * ステータスバー / ナビゲーションバー周辺の余白が WebView の背景と食い違わないよう、
+ * 初回マウント時と切り替え時の両方で通知する。
+ */
+function NativeThemeSync() {
+  const { colorScheme } = useColorScheme();
+  const { hydrated, supports, callNative } = useBridge();
+
+  useEffect(() => {
+    if (!hydrated || !colorScheme || !supports('setAppTheme')) {
+      return;
+    }
+    callNative('setAppTheme', [colorScheme]);
+  }, [hydrated, colorScheme, supports, callNative]);
+
+  return null;
+}
 
 function NoticeSnackbar() {
   const { notice, dismissNotice } = useBridge();
@@ -37,6 +58,7 @@ function NoticeSnackbar() {
 export function DemoApp() {
   return (
     <BridgeProvider>
+      <NativeThemeSync />
       <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
         <AppHeader />
         <Container maxWidth="sm" component="main" sx={{ py: 3 }}>

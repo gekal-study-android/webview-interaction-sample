@@ -18,11 +18,13 @@ import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import { useBridge } from '../bridge-provider';
 
 function ColorSchemeToggle() {
-  const { mode, setMode } = useColorScheme();
-  const { hydrated } = useBridge();
+  // mode は 'system' を取りうるため、実際に適用されている colorScheme で判定する。
+  // mode === 'dark' で判定すると、システムがダークの状態でも isDark が false になり、
+  // 初回タップの setMode('dark') が現状と同じ配色を指定するだけで何も変わらない。
+  const { colorScheme, setMode } = useColorScheme();
 
-  // SSR 時は mode が未確定のため、ハイドレーション完了までアイコンを固定する
-  const isDark = hydrated && mode === 'dark';
+  // SSR と初回レンダリングでは colorScheme が undefined になる（= ライト扱い）
+  const isDark = colorScheme === 'dark';
 
   return (
     <Tooltip title={isDark ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}>

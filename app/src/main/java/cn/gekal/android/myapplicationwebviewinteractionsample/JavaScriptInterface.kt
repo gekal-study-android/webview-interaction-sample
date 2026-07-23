@@ -25,7 +25,11 @@ import java.util.TimeZone
  *
  * Web 側の型定義は `web/types/android.d.ts` にある。
  */
-class JavaScriptInterface(private val context: Context, private val webView: WebView) {
+class JavaScriptInterface(
+  private val context: Context,
+  private val webView: WebView,
+  private val onAppThemeChanged: (String) -> Unit = {},
+) {
   private val mainHandler = Handler(Looper.getMainLooper())
 
   /** 引数 1 つの呼び出し。既定は [Toast.LENGTH_SHORT]。 */
@@ -40,6 +44,17 @@ class JavaScriptInterface(private val context: Context, private val webView: Web
       Toast.makeText(context, message, duration).show()
       webView.evaluateJavascript("javascript: handleReturnValue('Hello from Android!')", null)
     }
+  }
+
+  /**
+   * WebView 側の配色をネイティブにも反映させる。
+   * システムバー周辺の余白が WebView の背景と食い違わないようにするために使う。
+   *
+   * @param theme `"light"` / `"dark"` / `"system"`
+   */
+  @JavascriptInterface
+  fun setAppTheme(theme: String) {
+    mainHandler.post { onAppThemeChanged(theme) }
   }
 
   /** 端末情報を JSON 文字列として同期的に返す。 */
