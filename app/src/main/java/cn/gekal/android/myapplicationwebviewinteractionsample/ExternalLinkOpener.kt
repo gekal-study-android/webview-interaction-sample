@@ -42,7 +42,7 @@ fun openExternalLink(context: Context, url: String, mode: ExternalOpenMode, styl
 
     ExternalOpenMode.CUSTOM_TAB -> launchCustomTab(context, uri, style, partial = false)
 
-    ExternalOpenMode.PARTIAL_CUSTOM_TAB -> launchCustomTab(context, uri, style, partial = true)
+    ExternalOpenMode.PARTIAL_CUSTOM_TAB -> launchPartialCustomTab(context, uri, style)
 
     ExternalOpenMode.WARMED_CUSTOM_TAB -> launchWarmedCustomTab(context, uri, style)
 
@@ -93,6 +93,32 @@ private fun launchCustomTab(
   } catch (e: ActivityNotFoundException) {
     Log.w(TAG, "Custom Tabs を開けないためブラウザにフォールバックします: $uri", e)
     openWithExternalApp(context, uri)
+  }
+}
+
+/**
+ * ボトムシート状の部分表示で開く。
+ *
+ * **[CustomTabsSession] を渡さないと部分表示にならず全画面になる。**
+ * 公式の要件は「`CustomTabsServiceConnection` で張ったセッションを渡す」か
+ * 「`startActivityForResult()` で起動する」のどちらかで、ここでは前者を使う。
+ *
+ * このほか、以下の場合も全画面に落ちる。
+ * - 既定のブラウザが部分表示に対応していない（エクストラが無視される）
+ * - 指定した高さが画面の 50% 未満（Chrome が 50% に引き上げる）
+ * - 横向きやマルチウィンドウ
+ */
+private fun launchPartialCustomTab(context: Context, uri: Uri, style: CustomTabStyle) {
+  CustomTabsSessionHolder.withSession(context) { session ->
+    if (session == null) {
+      Log.w(TAG, "セッションを取得できないため部分表示にならず全画面で開きます: $uri")
+      Toast.makeText(
+        context,
+        "ブラウザのセッションを取得できないため、全画面で開きます",
+        Toast.LENGTH_LONG,
+      ).show()
+    }
+    launchCustomTab(context, uri, style, partial = true, session = session)
   }
 }
 
