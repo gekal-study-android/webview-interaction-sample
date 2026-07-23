@@ -55,12 +55,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
 
-/** エラー時に WebView を空にするための URL。 */
-private const val BLANK_URL = "about:blank"
-
-/** WebView 内で読み込むスキーム。これ以外は端末のアプリに渡す。 */
-private val WEB_SCHEMES = setOf("http", "https")
-
 /**
  * `tel:` / `mailto:` などの URI を対応するアプリで開く。
  *
@@ -68,14 +62,12 @@ private val WEB_SCHEMES = setOf("http", "https")
  * [Intent.ACTION_CALL] は即座に発信してしまい `CALL_PHONE` 権限も必要になるため使わない。
  */
 private fun openWithExternalApp(context: Context, uri: Uri) {
-  val intent = when (uri.scheme) {
-    "tel" -> Intent(Intent.ACTION_DIAL, uri)
-
-    // メール / SMS は宛先付きの作成画面を開く
-    "mailto", "sms", "smsto" -> Intent(Intent.ACTION_SENDTO, uri)
-
-    else -> Intent(Intent.ACTION_VIEW, uri)
-  }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+  val action = when (LinkPolicy.externalIntentFor(uri.scheme)) {
+    ExternalIntent.DIAL -> Intent.ACTION_DIAL
+    ExternalIntent.SEND_TO -> Intent.ACTION_SENDTO
+    ExternalIntent.VIEW -> Intent.ACTION_VIEW
+  }
+  val intent = Intent(action, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
   try {
     context.startActivity(intent)
@@ -97,16 +89,6 @@ enum class AppTheme {
     fun from(value: String): AppTheme =
       entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SYSTEM
   }
-}
-
-/** WebView の読み込み状態。 */
-sealed interface LoadState {
-  data object Loading : LoadState
-
-  data object Loaded : LoadState
-
-  /** メインフレームの読み込みに失敗した状態。[detail] は原因の概要。 */
-  data class Error(val detail: String) : LoadState
 }
 
 class MainActivity : ComponentActivity() {
@@ -144,7 +126,7 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
-  var loadState by remember { mutableStateOf<LoadState>(LoadState.Loading) }
+  var loadState by remember { mutableStateOf<LoadState>(LoadStateReducer.onLoadRequested()) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
 
@@ -156,7 +138,7 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
   val startLoad: (String) -> Unit = { url ->
-    loadState = LoadState.Loading
+    loadState = LoadStateReducer.onLoadRequested()
     webViewInstance?.loadUrl(url)
   }
 
@@ -190,26 +172,33 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               request: WebResourceRequest?,
             ): Boolean {
               val uri = request?.url ?: return false
-              if (uri.scheme in WEB_SCHEMES && uri.host == targetHost) {
+              if (LinkPolicy.resolve(uri.scheme, uri.host, targetHost) == Navigation.IN_WEB_VIEW) {
                 return false
               }
               openWithExternalApp(context, uri)
               return true
             }
 
+            /** エラー画面を出すときは WebView を空にして、失敗したページを残さない。 */
+            private fun handleMainFrameError(
+              view: WebView?,
+              isForMainFrame: Boolean,
+              detail: String,
+            ) {
+              loadState = LoadStateReducer.onResourceError(loadState, isForMainFrame, detail)
+              if (isForMainFrame) {
+                view?.loadUrl(LoadStateReducer.BLANK_URL)
+              }
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
               super.onPageStarted(view, url, favicon)
-              // エラー後に読み込む about:blank は状態を変えない
-              if (url != BLANK_URL) {
-                loadState = LoadState.Loading
-              }
+              loadState = LoadStateReducer.onPageStarted(loadState, url)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
               super.onPageFinished(view, url)
-              if (url != BLANK_URL && loadState is LoadState.Loading) {
-                loadState = LoadState.Loaded
-              }
+              loadState = LoadStateReducer.onPageFinished(loadState, url)
             }
 
             override fun onReceivedError(
@@ -218,10 +207,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               error: WebResourceError?,
             ) {
               super.onReceivedError(view, request, error)
-              if (request?.isForMainFrame == true) {
-                loadState = LoadState.Error("${error?.description} (code: ${error?.errorCode})")
-                view?.loadUrl(BLANK_URL)
-              }
+              handleMainFrameError(
+                view,
+                request?.isForMainFrame == true,
+                LoadStateReducer.resourceErrorDetail(error?.description, error?.errorCode ?: 0),
+              )
             }
 
             override fun onReceivedHttpError(
@@ -230,13 +220,14 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               errorResponse: WebResourceResponse?,
             ) {
               super.onReceivedHttpError(view, request, errorResponse)
-              if (request?.isForMainFrame == true) {
-                loadState =
-                  LoadState.Error(
-                    "HTTP ${errorResponse?.statusCode} ${errorResponse?.reasonPhrase}",
-                  )
-                view?.loadUrl(BLANK_URL)
-              }
+              handleMainFrameError(
+                view,
+                request?.isForMainFrame == true,
+                LoadStateReducer.httpErrorDetail(
+                  errorResponse?.statusCode ?: 0,
+                  errorResponse?.reasonPhrase,
+                ),
+              )
             }
 
             override fun onReceivedSslError(
@@ -244,9 +235,12 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               handler: SslErrorHandler?,
               error: SslError?,
             ) {
-              loadState = LoadState.Error("SSL エラー (primaryError: ${error?.primaryError})")
               handler?.cancel()
-              view?.loadUrl(BLANK_URL)
+              handleMainFrameError(
+                view,
+                isForMainFrame = true,
+                detail = LoadStateReducer.sslErrorDetail(error?.primaryError ?: 0),
+              )
             }
           }
 

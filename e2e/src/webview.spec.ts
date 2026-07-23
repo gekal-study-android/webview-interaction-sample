@@ -112,10 +112,7 @@ test.describe('リンクの種類', () => {
     ['メールを作成', 'mailto:support@example.com?subject=WebView%20Interaction%20Sample'],
     ['SMS を作成', 'sms:+81312345678?body=WebView%20Interaction%20Sample'],
     ['地図で開く', 'geo:35.681236,139.767125?q=東京駅'],
-    [
-      '外部サイトを開く',
-      'https://developer.android.com/develop/ui/views/layout/webapps/webview',
-    ],
+    ['外部サイトを開く', 'https://developer.android.com/develop/ui/views/layout/webapps/webview'],
   ];
 
   for (const [label, href] of CASES) {

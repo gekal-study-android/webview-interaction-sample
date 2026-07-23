@@ -96,7 +96,12 @@ export function LinkCard() {
                   secondary: { variant: 'caption' },
                 }}
               />
-              <Chip size="small" variant="outlined" label={`${link.href.split(':')[0]}:`} sx={{ height: 20, fontSize: 11 }} />
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`${link.href.split(':')[0]}:`}
+                sx={{ height: 20, fontSize: 11 }}
+              />
             </ListItemButton>
           ))}
         </List>
