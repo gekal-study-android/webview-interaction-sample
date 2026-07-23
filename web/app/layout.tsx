@@ -5,12 +5,22 @@ import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { ThemeProvider } from '@mui/material/styles';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 
+import { basePath } from '../base-path';
 import { BootStyle } from './boot-style';
 import theme from './theme';
 
 export const metadata: Metadata = {
   title: 'WebView Example',
   description: 'Android WebView と JavaScript の相互作用デモ',
+  // app/favicon.ico は link タグが自動生成されず、basePath 配下に置かれるため
+  // ルートの /favicon.ico を見に行くブラウザからは解決できない。
+  // ここで宣言すると icon.svg の自動生成タグも上書きされるので、両方を明示する。
+  icons: {
+    icon: [
+      { url: `${basePath}/icon.svg`, type: 'image/svg+xml', sizes: 'any' },
+      { url: `${basePath}/favicon.ico`, type: 'image/x-icon', sizes: '16x16 32x32 48x48' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
