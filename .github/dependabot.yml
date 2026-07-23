@@ -1,0 +1,94 @@
+version: 2
+
+# cooldown は公開直後のバージョンを掴まないための待機期間。
+# web / e2e では pnpm 11 の supply-chain ポリシー (minimumReleaseAge = 24 時間) を
+# 確実に満たす目的も兼ねている。これが無いと、公開直後のパッケージを含む
+# ロックファイルの PR が CI の ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION で落ちる。
+
+updates:
+  # GitHub Actions (.github/workflows/*.yml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Web コンテンツ (Next.js + MUI / pnpm)
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      next:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      mui:
+        patterns:
+          - "@mui/*"
+          - "@emotion/*"
+      dev-dependencies:
+        dependency-type: "development"
+
+  # E2E テスト (Playwright / pnpm)
+  - package-ecosystem: "npm"
+    directory: "/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/*"
+      dev-dependencies:
+        dependency-type: "development"
+
+  # Android (gradle/libs.versions.toml のバージョンカタログ)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      androidx:
+        patterns:
+          - "androidx.*"
+      # ライブラリ (group:artifact) とプラグイン ID の両方を拾えるようにする
+      firebase:
+        patterns:
+          - "com.google.firebase*"
+          - "com.google.gms*"
+      build-tools:
+        patterns:
+          - "com.android.*"
+          - "org.jetbrains.kotlin*"
+          - "com.diffplug.spotless*"
