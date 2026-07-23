@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^16.4.7"
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",
