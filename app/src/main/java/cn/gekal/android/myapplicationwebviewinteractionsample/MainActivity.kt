@@ -2,6 +2,7 @@ package cn.gekal.android.myapplicationwebviewinteractionsample
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.graphics.Bitmap
 import android.net.http.SslError
 import android.os.Bundle
 import android.view.ViewGroup
@@ -23,8 +24,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,11 +42,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
+
+/** エラー時に WebView を空にするための URL。 */
+private const val BLANK_URL = "about:blank"
 
 /** アプリの配色。既定は [SYSTEM]（端末のダークモード設定に追従）。 */
 enum class AppTheme {
@@ -57,6 +64,16 @@ enum class AppTheme {
     fun from(value: String): AppTheme =
       entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SYSTEM
   }
+}
+
+/** WebView の読み込み状態。 */
+sealed interface LoadState {
+  data object Loading : LoadState
+
+  data object Loaded : LoadState
+
+  /** メインフレームの読み込みに失敗した状態。[detail] は原因の概要。 */
+  data class Error(val detail: String) : LoadState
 }
 
 class MainActivity : ComponentActivity() {
@@ -94,13 +111,18 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
-  var isError by remember { mutableStateOf(false) }
+  var loadState by remember { mutableStateOf<LoadState>(LoadState.Loading) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
 
   // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
+
+  val startLoad: (String) -> Unit = { url ->
+    loadState = LoadState.Loading
+    webViewInstance?.loadUrl(url)
+  }
 
   Box(
     modifier = Modifier
@@ -122,6 +144,21 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
           setBackgroundColor(backgroundColor)
 
           webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+              super.onPageStarted(view, url, favicon)
+              // エラー後に読み込む about:blank は状態を変えない
+              if (url != BLANK_URL) {
+                loadState = LoadState.Loading
+              }
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+              super.onPageFinished(view, url)
+              if (url != BLANK_URL && loadState is LoadState.Loading) {
+                loadState = LoadState.Loaded
+              }
+            }
+
             override fun onReceivedError(
               view: WebView?,
               request: WebResourceRequest?,
@@ -129,8 +166,8 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
             ) {
               super.onReceivedError(view, request, error)
               if (request?.isForMainFrame == true) {
-                isError = true
-                view?.loadUrl("about:blank")
+                loadState = LoadState.Error("${error?.description} (code: ${error?.errorCode})")
+                view?.loadUrl(BLANK_URL)
               }
             }
 
@@ -141,8 +178,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
             ) {
               super.onReceivedHttpError(view, request, errorResponse)
               if (request?.isForMainFrame == true) {
-                isError = true
-                view?.loadUrl("about:blank")
+                loadState =
+                  LoadState.Error(
+                    "HTTP ${errorResponse?.statusCode} ${errorResponse?.reasonPhrase}",
+                  )
+                view?.loadUrl(BLANK_URL)
               }
             }
 
@@ -151,9 +191,9 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               handler: SslErrorHandler?,
               error: SslError?,
             ) {
-              isError = true
+              loadState = LoadState.Error("SSL エラー (primaryError: ${error?.primaryError})")
               handler?.cancel()
-              view?.loadUrl("about:blank")
+              view?.loadUrl(BLANK_URL)
             }
           }
 
@@ -170,34 +210,67 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
         }
       },
       update = {
-        it.visibility = if (isError) android.view.View.GONE else android.view.View.VISIBLE
+        it.visibility = if (loadState is LoadState.Error) {
+          android.view.View.GONE
+        } else {
+          android.view.View.VISIBLE
+        }
         it.setBackgroundColor(backgroundColor)
       },
     )
 
-    if (isError) {
-      ErrorView(onRetry = {
-        isError = false
-        webViewInstance?.loadUrl(targetUrl)
-      })
+    when (val state = loadState) {
+      is LoadState.Loading -> LoadingView()
+      is LoadState.Error -> ErrorView(detail = state.detail, onRetry = { startLoad(targetUrl) })
+      is LoadState.Loaded -> Unit
     }
   }
 }
 
 @Composable
-fun ErrorView(onRetry: () -> Unit) {
-  Column(
+fun LoadingView() {
+  Box(
     modifier = Modifier
       .fillMaxSize()
       .background(MaterialTheme.colorScheme.background),
+    contentAlignment = Alignment.Center,
+  ) {
+    CircularProgressIndicator()
+  }
+}
+
+@Composable
+fun ErrorView(detail: String, onRetry: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(MaterialTheme.colorScheme.background)
+      .padding(24.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.Center,
   ) {
     Text(
-      text = "ネットワークエラーが発生しました",
+      text = "ページを読み込めませんでした",
       color = MaterialTheme.colorScheme.error,
       fontSize = 18.sp,
+      textAlign = TextAlign.Center,
     )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+      text = "通信状況を確認してから再試行してください。",
+      color = MaterialTheme.colorScheme.onBackground,
+      fontSize = 14.sp,
+      textAlign = TextAlign.Center,
+    )
+    if (detail.isNotBlank()) {
+      Spacer(modifier = Modifier.height(8.dp))
+      Text(
+        text = detail,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 12.sp,
+        textAlign = TextAlign.Center,
+      )
+    }
     Spacer(modifier = Modifier.height(16.dp))
     Button(onClick = onRetry) {
       Text("再試行")

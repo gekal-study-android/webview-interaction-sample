@@ -30,6 +30,10 @@ declare global {
     requestNativeCallback?: (requestId: string, delayMillis: number) => void;
     /** ネイティブ側の配色を Web と揃える。`'light'` / `'dark'` / `'system'`。 */
     setAppTheme?: (theme: 'light' | 'dark' | 'system') => void;
+    /** WebView が表示しているページを再読み込みする。 */
+    reloadPage?: () => void;
+    /** 到達できない URL を読み込み、ネイティブのエラー画面を意図的に表示させる（デモ用）。 */
+    simulateLoadError?: () => void;
   }
 
   /** ネイティブから `onNativeEvent` に渡されるイベント。 */

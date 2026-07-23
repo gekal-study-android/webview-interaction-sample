@@ -57,6 +57,8 @@ const KNOWN_METHODS: BridgeMethod[] = [
   'shareText',
   'requestNativeCallback',
   'setAppTheme',
+  'reloadPage',
+  'simulateLoadError',
 ];
 
 const timestamp = () =>

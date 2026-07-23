@@ -15,6 +15,7 @@ import { DeviceInfoCard } from './device-info-card';
 import { EnvironmentCard } from './environment-card';
 import { EventLogCard } from './event-log-card';
 import { NativeCallbackCard } from './native-callback-card';
+import { PageControlCard } from './page-control-card';
 import { SystemCard } from './system-card';
 import { TextSampleCard } from './text-sample-card';
 import { ThemeGate } from './theme-gate';
@@ -70,6 +71,7 @@ export function DemoApp() {
               <DeviceInfoCard />
               <SystemCard />
               <EnvironmentCard />
+              <PageControlCard />
               <TextSampleCard />
               <EventLogCard />
             </Stack>

@@ -31,11 +31,19 @@ test.beforeEach(async ({ page }) => {
       setAppTheme: (theme: string) => {
         (window as any).__appThemeCalls = [...((window as any).__appThemeCalls ?? []), theme];
       },
+      // 実際にページを再読み込みするとモックが消えるため、呼び出しの記録だけを行う
+      reloadPage: () => {
+        (window as any).__pageCalls = [...((window as any).__pageCalls ?? []), 'reloadPage'];
+      },
+      simulateLoadError: () => {
+        (window as any).__pageCalls = [...((window as any).__pageCalls ?? []), 'simulateLoadError'];
+      },
     };
   });
 });
 
 const appThemeCalls = (page: Page) => page.evaluate(() => (window as any).__appThemeCalls ?? []);
+const pageCalls = (page: Page) => page.evaluate(() => (window as any).__pageCalls ?? []);
 
 const openDemo = async (page: Page) => {
   await page.goto(WEBVIEW_URL);
@@ -84,6 +92,25 @@ test('should log every interaction between JS and native', async ({ page }) => {
   const log = page.getByRole('list', { name: 'イベントログ' });
   await expect(log.getByText("showToast('Hello from WebView!')")).toBeVisible();
   await expect(log.getByText("handleReturnValue('Hello from Mocked!')")).toBeVisible();
+});
+
+test.describe('ページの読み込み', () => {
+  test('should ask the native side to reload the page', async ({ page }) => {
+    await openDemo(page);
+
+    await page.getByRole('button', { name: '再読み込み' }).click();
+
+    await expect.poll(() => pageCalls(page)).toEqual(['reloadPage']);
+    await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('reloadPage()')).toBeVisible();
+  });
+
+  test('should ask the native side to show the error screen', async ({ page }) => {
+    await openDemo(page);
+
+    await page.getByRole('button', { name: '読み込みエラーを再現' }).click();
+
+    await expect.poll(() => pageCalls(page)).toEqual(['simulateLoadError']);
+  });
 });
 
 test.describe('カラーテーマ', () => {

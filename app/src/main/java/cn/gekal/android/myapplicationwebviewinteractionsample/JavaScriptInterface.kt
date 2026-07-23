@@ -46,6 +46,21 @@ class JavaScriptInterface(
     }
   }
 
+  /** 現在のページを再読み込みする。 */
+  @JavascriptInterface
+  fun reloadPage() {
+    mainHandler.post { webView.reload() }
+  }
+
+  /**
+   * 到達できない URL を読み込んで、ネイティブのエラー画面を意図的に表示させる。
+   * 機内モードにしなくてもエラーからの復帰（再試行）を確認できるようにするためのデモ用。
+   */
+  @JavascriptInterface
+  fun simulateLoadError() {
+    mainHandler.post { webView.loadUrl(UNREACHABLE_URL) }
+  }
+
   /**
    * WebView 側の配色をネイティブにも反映させる。
    * システムバー周辺の余白が WebView の背景と食い違わないようにするために使う。
@@ -134,6 +149,8 @@ class JavaScriptInterface(
   }
 
   private companion object {
+    /** RFC 2606 で予約されている、名前解決に必ず失敗する TLD を使う。 */
+    const val UNREACHABLE_URL = "https://unreachable.invalid/"
     const val MIN_VIBRATION_MILLIS = 1
     const val MAX_VIBRATION_MILLIS = 2_000
     const val MAX_CALLBACK_DELAY_MILLIS = 10_000
