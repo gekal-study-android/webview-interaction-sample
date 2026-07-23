@@ -1,6 +1,8 @@
 package cn.gekal.android.myapplicationwebviewinteractionsample
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** デモページのリンクが WebView 内 / 外部アプリのどちらに振り分けられるかを検証する。 */
@@ -34,6 +36,17 @@ class LinkPolicyTest {
   @Test
   fun `配信元のホストが不明なときは WebView 内で開かない`() {
     assertEquals(Navigation.CUSTOM_TAB, LinkPolicy.resolve("https", "example.com", null))
+  }
+
+  @Test
+  fun `ブラウザ表示に使えるのは http と https だけ`() {
+    // WebView から任意の URL を渡せるため、javascript: や file: を開かせない
+    assertTrue(LinkPolicy.isBrowsableUrl("https"))
+    assertTrue(LinkPolicy.isBrowsableUrl("http"))
+    assertFalse(LinkPolicy.isBrowsableUrl("javascript"))
+    assertFalse(LinkPolicy.isBrowsableUrl("file"))
+    assertFalse(LinkPolicy.isBrowsableUrl("content"))
+    assertFalse(LinkPolicy.isBrowsableUrl(null))
   }
 
   @Test
