@@ -2,9 +2,14 @@ package cn.gekal.android.myapplicationwebviewinteractionsample
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
@@ -13,6 +18,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,6 +57,29 @@ import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplica
 
 /** エラー時に WebView を空にするための URL。 */
 private const val BLANK_URL = "about:blank"
+
+/** WebView 内で読み込むスキーム。これ以外は端末のアプリに渡す。 */
+private val WEB_SCHEMES = setOf("http", "https")
+
+/**
+ * `tel:` などの URI を対応するアプリで開く。
+ *
+ * 電話は [Intent.ACTION_DIAL]（ダイヤル画面を開くだけ）を使う。
+ * [Intent.ACTION_CALL] は即座に発信してしまい `CALL_PHONE` 権限も必要になるため使わない。
+ */
+private fun openWithExternalApp(context: Context, uri: Uri) {
+  val intent = when (uri.scheme) {
+    "tel" -> Intent(Intent.ACTION_DIAL, uri)
+    else -> Intent(Intent.ACTION_VIEW, uri)
+  }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+  try {
+    context.startActivity(intent)
+  } catch (e: ActivityNotFoundException) {
+    Log.w("MainActivity", "この URI を開けるアプリがありません: $uri", e)
+    Toast.makeText(context, "対応するアプリが見つかりませんでした", Toast.LENGTH_SHORT).show()
+  }
+}
 
 /** アプリの配色。既定は [SYSTEM]（端末のダークモード設定に追従）。 */
 enum class AppTheme {
@@ -144,6 +173,22 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
           setBackgroundColor(backgroundColor)
 
           webViewClient = object : WebViewClient() {
+            /**
+             * `tel:` や `mailto:` は WebView が読み込めずエラーになるため、
+             * 端末のアプリ（電話・メールなど）に渡す。http(s) は今までどおり WebView で表示する。
+             */
+            override fun shouldOverrideUrlLoading(
+              view: WebView?,
+              request: WebResourceRequest?,
+            ): Boolean {
+              val uri = request?.url ?: return false
+              if (uri.scheme in WEB_SCHEMES) {
+                return false
+              }
+              openWithExternalApp(context, uri)
+              return true
+            }
+
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
               super.onPageStarted(view, url, favicon)
               // エラー後に読み込む about:blank は状態を変えない

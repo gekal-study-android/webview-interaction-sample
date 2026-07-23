@@ -94,6 +94,18 @@ test('should log every interaction between JS and native', async ({ page }) => {
   await expect(log.getByText("handleReturnValue('Hello from Mocked!')")).toBeVisible();
 });
 
+test('should expose the phone number as a tel: link', async ({ page }) => {
+  await openDemo(page);
+
+  // ネイティブは shouldOverrideUrlLoading でこの href を受け取り、電話アプリに渡す
+  const phone = page.getByRole('link', { name: '03-1234-5678' });
+  await expect(phone).toHaveAttribute('href', 'tel:+81312345678');
+
+  // ブラウザでは tel: に遷移しないよう、クリックはせず記録だけ確認する
+  await phone.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('tel:+81312345678')).toBeVisible();
+});
+
 test.describe('ページの読み込み', () => {
   test('should ask the native side to reload the page', async ({ page }) => {
     await openDemo(page);
