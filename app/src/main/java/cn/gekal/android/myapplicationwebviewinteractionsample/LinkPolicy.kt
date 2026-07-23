@@ -5,7 +5,13 @@ enum class Navigation {
   /** WebView 内でそのまま読み込む。 */
   IN_WEB_VIEW,
 
-  /** 端末のアプリ（電話・メール・ブラウザなど）に渡す。 */
+  /**
+   * Custom Tabs（アプリ内ブラウザ）でアプリの上に重ねて開く。
+   * URL バーが出るので外部サイトだと分かり、閉じれば元の画面に戻れる。
+   */
+  CUSTOM_TAB,
+
+  /** 端末のアプリ（電話・メール・地図など）に渡す。 */
   EXTERNAL_APP,
 }
 
@@ -34,12 +40,15 @@ object LinkPolicy {
    * @param targetHost 配信元（`BuildConfig.WEBVIEW_URL`）のホスト
    *
    * 配信元と同じホストの http(s) だけ WebView 内で読み込む。
-   * 外部サイトを WebView 内で開くと戻る手段がなく、デモページに戻れなくなるため。
+   * 外部サイトを WebView 内で開くと、URL が見えないまま別サイトを表示することになり、
+   * 戻る手段もない。Custom Tabs なら URL バーで接続先が分かり、閉じれば元の画面に戻れる。
    */
   fun resolve(scheme: String?, host: String?, targetHost: String?): Navigation {
-    val isWebScheme = scheme?.lowercase() in WEB_SCHEMES
+    if (scheme?.lowercase() !in WEB_SCHEMES) {
+      return Navigation.EXTERNAL_APP
+    }
     val isSameHost = targetHost != null && host.equals(targetHost, ignoreCase = true)
-    return if (isWebScheme && isSameHost) Navigation.IN_WEB_VIEW else Navigation.EXTERNAL_APP
+    return if (isSameHost) Navigation.IN_WEB_VIEW else Navigation.CUSTOM_TAB
   }
 
   fun externalIntentFor(scheme: String?): ExternalIntent = when (scheme?.lowercase()) {

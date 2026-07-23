@@ -22,6 +22,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +57,35 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
 
+private const val TAG = "MainActivity"
+
+/**
+ * 外部サイトを Custom Tabs（アプリ内ブラウザ）でアプリの上に重ねて開く。
+ *
+ * WebView 内に読み込むと URL が見えず、外部サイトだと分からないまま操作させてしまう。
+ * Custom Tabs なら接続先が URL バーに表示され、閉じれば元の画面に戻る。
+ * 対応ブラウザがない端末では通常のブラウザ起動にフォールバックする。
+ */
+private fun openInCustomTab(context: Context, uri: Uri, toolbarColor: Int) {
+  val colors = CustomTabColorSchemeParams.Builder()
+    .setToolbarColor(toolbarColor)
+    .build()
+
+  val customTabsIntent = CustomTabsIntent.Builder()
+    .setDefaultColorSchemeParams(colors)
+    // ページタイトルを出して、どのサイトを見ているかを分かりやすくする
+    .setShowTitle(true)
+    .setUrlBarHidingEnabled(false)
+    .build()
+
+  try {
+    customTabsIntent.launchUrl(context, uri)
+  } catch (e: ActivityNotFoundException) {
+    Log.w(TAG, "Custom Tabs を開けないためブラウザにフォールバックします: $uri", e)
+    openWithExternalApp(context, uri)
+  }
+}
+
 /**
  * `tel:` / `mailto:` などの URI を対応するアプリで開く。
  *
@@ -72,7 +103,7 @@ private fun openWithExternalApp(context: Context, uri: Uri) {
   try {
     context.startActivity(intent)
   } catch (e: ActivityNotFoundException) {
-    Log.w("MainActivity", "この URI を開けるアプリがありません: $uri", e)
+    Log.w(TAG, "この URI を開けるアプリがありません: $uri", e)
     Toast.makeText(context, "対応するアプリが見つかりませんでした", Toast.LENGTH_SHORT).show()
   }
 }
@@ -137,6 +168,9 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
+  // Custom Tabs のツールバーもアプリと同じ配色にして、アプリ内の表示だと分かるようにする
+  val toolbarColor = MaterialTheme.colorScheme.surface.toArgb()
+
   val startLoad: (String) -> Unit = { url ->
     loadState = LoadStateReducer.onLoadRequested()
     webViewInstance?.loadUrl(url)
@@ -172,10 +206,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               request: WebResourceRequest?,
             ): Boolean {
               val uri = request?.url ?: return false
-              if (LinkPolicy.resolve(uri.scheme, uri.host, targetHost) == Navigation.IN_WEB_VIEW) {
-                return false
+              when (LinkPolicy.resolve(uri.scheme, uri.host, targetHost)) {
+                Navigation.IN_WEB_VIEW -> return false
+                Navigation.CUSTOM_TAB -> openInCustomTab(context, uri, toolbarColor)
+                Navigation.EXTERNAL_APP -> openWithExternalApp(context, uri)
               }
-              openWithExternalApp(context, uri)
               return true
             }
 

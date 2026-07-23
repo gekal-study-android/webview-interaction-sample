@@ -17,9 +17,10 @@ class LinkPolicyTest {
   }
 
   @Test
-  fun `別ホストの https は端末のブラウザに渡す`() {
-    // WebView 内で開くと戻る手段がなく、デモページに戻れなくなる
-    assertEquals(Navigation.EXTERNAL_APP, resolve("https", "developer.android.com"))
+  fun `別ホストの https は Custom Tabs で開く`() {
+    // WebView 内で開くと URL が見えず、外部サイトだと分からないまま操作させてしまう
+    assertEquals(Navigation.CUSTOM_TAB, resolve("https", "developer.android.com"))
+    assertEquals(Navigation.CUSTOM_TAB, resolve("http", "example.com"))
   }
 
   @Test
@@ -31,8 +32,8 @@ class LinkPolicyTest {
   }
 
   @Test
-  fun `配信元のホストが不明なときは外部アプリに渡す`() {
-    assertEquals(Navigation.EXTERNAL_APP, LinkPolicy.resolve("https", "example.com", null))
+  fun `配信元のホストが不明なときは WebView 内で開かない`() {
+    assertEquals(Navigation.CUSTOM_TAB, LinkPolicy.resolve("https", "example.com", null))
   }
 
   @Test

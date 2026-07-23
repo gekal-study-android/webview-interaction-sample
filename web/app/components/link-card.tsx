@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -50,7 +51,7 @@ const LINKS: LinkSample[] = [
     icon: <OpenInNewIcon />,
     label: '外部サイトを開く',
     href: 'https://developer.android.com/develop/ui/views/layout/webapps/webview',
-    handledBy: 'ホストが異なるため端末のブラウザへ',
+    handledBy: 'Custom Tabs でアプリの上に重ねて表示',
     external: true,
   },
 ];
@@ -89,7 +90,18 @@ export function LinkCard() {
             >
               <ListItemIcon sx={{ minWidth: 36, color: 'primary.main' }}>{link.icon}</ListItemIcon>
               <ListItemText
-                primary={link.label}
+                primary={
+                  link.external ? (
+                    <>
+                      {link.label}
+                      <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
+                        {new URL(link.href).host}
+                      </Typography>
+                    </>
+                  ) : (
+                    link.label
+                  )
+                }
                 secondary={link.handledBy}
                 slotProps={{
                   primary: { variant: 'body2', sx: { fontWeight: 600 } },
@@ -105,6 +117,11 @@ export function LinkCard() {
             </ListItemButton>
           ))}
         </List>
+
+        <Alert severity="info" variant="outlined" icon={<OpenInNewIcon fontSize="small" />}>
+          外部サイトは WebView 内には表示しません。URL バーの出る Custom Tabs
+          でアプリの上に重ねて開くため、接続先が分かり、閉じれば元の画面に戻ります。
+        </Alert>
 
         <Typography variant="caption" color="text.secondary">
           電話（<code>tel:</code>）は「表示サンプル」にあります。ネイティブは <code>shouldOverrideUrlLoading</code>{' '}
