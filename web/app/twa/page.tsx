@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { basePath } from '../../base-path';
 import { ThemeGate } from '../components/theme-gate';
+import { ReturnButton } from './return-button';
 import { TwaStatus } from './twa-status';
 
 export const metadata: Metadata = {
@@ -38,9 +38,7 @@ export default function TwaPage() {
 
             <TwaStatus />
 
-            <Button href={`${basePath}/`} variant="outlined" fullWidth>
-              デモ画面に戻る
-            </Button>
+            <ReturnButton demoUrl={`${basePath}/index.html`} />
           </Stack>
         </Container>
       </Box>
