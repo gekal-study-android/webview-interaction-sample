@@ -7,11 +7,25 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 - **JavaScript Interface**: Android と WebView 内の JavaScript 間で相互にメソッドを呼び出す方法。
 - **エラーハンドリング**: WebView での HTTP エラー (404, 500) や SSL エラー時のネイティブエラー画面表示。
 - **E2E テスト**: Playwright を使用した WebView の自動テスト（`e2e` ディレクトリ）。
+- **デモ画面**: Next.js + MUI で構築した、ブリッジの動作を一覧できるデモ UI（`web` ディレクトリ）。
+
+### デモ機能
+
+| 機能 | 方向 | 内容 |
+| --- | --- | --- |
+| トースト表示 | JS → Native → JS | メッセージと表示時間を指定して `showToast()` を呼び、`handleReturnValue()` の応答を表示 |
+| 非同期コールバック | JS → Native → JS | 遅延を指定して `requestNativeCallback()` を呼び、`onNativeEvent()` の応答を待機 |
+| 端末情報 | JS → Native | `getDeviceInfo()` / `getBatteryStatus()` の戻り値（JSON）を表示 |
+| 端末機能の呼び出し | JS → Native | バイブレーション・クリップボードへのコピー・共有シート |
+| 実行環境 | Web | ブリッジの検出状況、利用可能なメソッド、User Agent、`env` クエリなど |
+| イベントログ | - | JS ⇄ Native のやり取りを時系列で記録 |
+
+ブラウザで直接開いた場合は `AndroidInterface` が存在しないため、ネイティブ呼び出しは実行されずログにのみ記録されます。
 
 ## プロジェクト構造
 
 - `app/`: Android アプリケーションのソースコード。
-- `web/`: GitHub Pages で公開する Web コンテンツ（Next.js / 静的エクスポート）。
+- `web/`: GitHub Pages で公開する Web コンテンツ（Next.js 静的エクスポート + MUI）。
 - `e2e/`: Playwright を使用したエンドツーエンドテスト。
 
 ## ローカル開発の準備
@@ -64,7 +78,7 @@ gh variable list --repo gekal-study-android/webview-interaction-sample --env app
 WebView が読み込むコンテンツは Next.js の静的エクスポート (`output: 'export'`) で生成し、GitHub Actions から GitHub Pages へデプロイしています。
 
 - URL: <https://gekal-study-android.github.io/webview-interaction-sample/index.html>
-- ソース: `web/`（App Router + TypeScript）
+- ソース: `web/`（App Router + TypeScript + MUI）
 - デプロイ: `.github/workflows/pages.yml`（`main` への push で自動デプロイ / PR ではビルド検証のみ）
 
 プロジェクトサイト配信のため `next.config.ts` で `basePath: '/webview-interaction-sample'` を指定しています。
