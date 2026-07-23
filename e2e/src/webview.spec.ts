@@ -183,6 +183,13 @@ test.describe('外部リンクの開き方', () => {
 test.describe('TWA 判定ページ', () => {
   const twaUrl = () => WEBVIEW_URL.replace(/index\.html.*$/, 'twa.html');
 
+  // このページは TWA / Custom Tabs として Chrome 側で開かれるため、ブリッジは注入されない
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      delete (window as any).AndroidInterface;
+    });
+  });
+
   test('should report that it is not running as a TWA in a browser', async ({ page }) => {
     await page.goto(twaUrl());
 
@@ -209,6 +216,20 @@ test.describe('TWA 判定ページ', () => {
 
     await expect(page.getByText('検証済みの TWA として表示中')).toBeVisible();
     await expect(page.getByText('起動元: cn.gekal.android.myapplicationwebviewinteractionsample')).toBeVisible();
+
+    // TWA として開かれている場合、戻るボタンは「閉じる」動作になる
+    await expect(page.getByRole('button', { name: 'アプリに戻る' })).toBeVisible();
+  });
+
+  test('should fall back to navigation when the page cannot close itself', async ({ page }) => {
+    await page.goto(twaUrl());
+
+    // アプリから開かれていなければ閉じる対象がないため、そのまま遷移する
+    const back = page.getByRole('button', { name: 'デモ画面に戻る' });
+    await expect(back).toBeEnabled();
+    await back.click();
+
+    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeVisible();
   });
 });
 
