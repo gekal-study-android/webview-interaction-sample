@@ -11,7 +11,7 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 ## プロジェクト構造
 
 - `app/`: Android アプリケーションのソースコード。
-- `docs/`: GitHub Pages で公開されている Web コンテンツ。
+- `web/`: GitHub Pages で公開する Web コンテンツ（Next.js / 静的エクスポート）。
 - `e2e/`: Playwright を使用したエンドツーエンドテスト。
 
 ## ローカル開発の準備
@@ -61,9 +61,29 @@ gh variable list --repo gekal-study-android/webview-interaction-sample --env app
 
 ## Web 側 (GitHub Pages)
 
-WebView が読み込むコンテンツは以下で公開されています。
+WebView が読み込むコンテンツは Next.js の静的エクスポート (`output: 'export'`) で生成し、GitHub Actions から GitHub Pages へデプロイしています。
+
 - URL: <https://gekal-study-android.github.io/webview-interaction-sample/index.html>
-- ソース: `/docs/index.html`
+- ソース: `web/`（App Router + TypeScript）
+- デプロイ: `.github/workflows/pages.yml`（`main` への push で自動デプロイ / PR ではビルド検証のみ）
+
+プロジェクトサイト配信のため `next.config.ts` で `basePath: '/webview-interaction-sample'` を指定しています。
+サイトルート配信で確認したい場合は `BASE_PATH=` を指定してビルドしてください。
+
+### ローカルでの開発
+
+```shell
+cd web
+pnpm install
+pnpm dev    # http://localhost:3000/webview-interaction-sample
+```
+
+### 静的エクスポートのビルド
+
+```shell
+cd web
+pnpm build  # web/out/ に出力される
+```
 
 ## 相互作用の仕組み
 

@@ -19,11 +19,9 @@ test('should be able to run tests', async ({ page }, testInfo) => {
   await page.goto(process.env.WEBVIEW_URL);
   await page.screenshot({ path: `test-results/screenshots/${testInfo.title}/${testInfo.project.name}/after-loading.png` });
 
-  await page.locator('button[onclick="showToast()"]').click();
+  // ハイドレーションが完了するとボタンが有効になる（click は enabled になるまで待機する）
+  await page.getByRole('button', { name: 'Show Toast' }).click();
   await page.screenshot({ path: `test-results/screenshots/${testInfo.title}/${testInfo.project.name}/after-click.png` });
 
-  await page
-    .locator('#message')
-    .innerText()
-    .then((message) => expect(message).toBe('Received: Hello from Mocked!'));
+  await expect(page.locator('#message')).toHaveText('Received: Hello from Mocked!');
 });
