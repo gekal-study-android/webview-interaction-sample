@@ -12,16 +12,18 @@ jobs:
     environment: application
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
+      # gradle/gradle-build-action は非推奨。後継の gradle/actions/setup-gradle へ移行。
+      # v6 はキャッシュ機能のライセンス変更 (Gradle Terms of Use への同意) を伴うため v5 に留める。
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Decode Google Services JSON
         env:
