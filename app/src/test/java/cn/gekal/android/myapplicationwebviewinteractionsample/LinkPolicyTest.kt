@@ -7,7 +7,7 @@ import org.junit.Test
 
 /** デモページのリンクが WebView 内 / 外部アプリのどちらに振り分けられるかを検証する。 */
 class LinkPolicyTest {
-  private val targetHost = "gekal-study-android.github.io"
+  private val targetHost = "webview-interaction-sample.demo.gekal.cn"
 
   private fun resolve(scheme: String?, host: String?) = LinkPolicy.resolve(scheme, host, targetHost)
 

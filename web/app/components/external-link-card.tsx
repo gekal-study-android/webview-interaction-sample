@@ -17,6 +17,13 @@ const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/weba
 /** App Links の確認用。対応アプリが入っていればそちらが開く。 */
 const APP_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
+/**
+ * TWA は「自分のサイトをアプリとして出す」ための仕組みなので、自サイトを開く。
+ * オリジン直下の /.well-known/assetlinks.json と manifest の asset_statements が対になって
+ * 初めて URL バーが隠れる。
+ */
+const OWN_SITE_URL = 'https://webview-interaction-sample.demo.gekal.cn/';
+
 /** `intent://` の例。対応アプリがなければ browser_fallback_url に落ちる。 */
 const INTENT_URI =
   'intent://developer.android.com/#Intent;scheme=https;' +
@@ -82,8 +89,9 @@ const MODES: OpenMode[] = [
   {
     mode: 'TRUSTED_WEB_ACTIVITY',
     label: 'Trusted Web Activity',
-    detail: 'Digital Asset Links で検証できたドメインなら URL バーなしの全画面になる',
-    caution: 'このデモのドメインは検証できないため、通常の Custom Tabs 表示に落ちます',
+    detail: '自サイトを Digital Asset Links で検証し、URL バーなしの全画面で開く',
+    url: OWN_SITE_URL,
+    caution: '署名証明書が assetlinks.json の登録と一致しないと、通常の Custom Tabs 表示に落ちます',
   },
 ];
 
