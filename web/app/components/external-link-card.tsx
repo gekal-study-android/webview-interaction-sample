@@ -48,6 +48,8 @@ const MODES: OpenMode[] = [
     mode: 'PARTIAL_CUSTOM_TAB',
     label: 'Custom Tabs（部分表示）',
     detail: 'ボトムシート状に画面の一部だけ占有する。下にアプリが見えたまま重なる',
+    caution:
+      'CustomTabsSession を渡さないと全画面になります。高さは画面の 50% 以上が必要で、横向き・マルチウィンドウや未対応ブラウザでも全画面に落ちます',
   },
   {
     mode: 'WARMED_CUSTOM_TAB',
