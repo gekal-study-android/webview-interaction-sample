@@ -1,31 +1,26 @@
 package cn.gekal.android.myapplicationwebviewinteractionsample
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.Message
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.SslErrorHandler
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.browser.customtabs.CustomTabColorSchemeParams
-import androidx.browser.customtabs.CustomTabsClient
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,74 +57,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
-
-private const val TAG = "MainActivity"
-
-/** [ContextWrapper] をたどって Activity を取り出す。 */
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-  is Activity -> this
-  is ContextWrapper -> baseContext.findActivity()
-  else -> null
-}
-
-/**
- * 外部サイトを Custom Tabs（アプリ内ブラウザ）でアプリの上に重ねて開く。
- *
- * WebView 内に読み込むと URL が見えず、外部サイトだと分からないまま操作させてしまう。
- * Custom Tabs なら接続先が URL バーに表示され、閉じれば元の画面に戻る。
- * 対応ブラウザがない端末では通常のブラウザ起動にフォールバックする。
- */
-private fun openInCustomTab(context: Context, uri: Uri, toolbarColor: Int) {
-  // Custom Tabs を描画するのはブラウザアプリ本体。対応ブラウザがない端末では
-  // CustomTabsIntent のエクストラが無視され、ただのブラウザ起動に「静かに」なる。
-  // 何が起きたか分かるよう、その場合はログとトーストで知らせる。
-  val provider = CustomTabsClient.getPackageName(context, null)
-  if (provider == null) {
-    Log.w(TAG, "Custom Tabs 対応ブラウザが見つかりません。通常のブラウザで開きます: $uri")
-    Toast.makeText(context, "Custom Tabs 対応ブラウザがないため、通常のブラウザで開きます", Toast.LENGTH_LONG).show()
-  }
-
-  val colors = CustomTabColorSchemeParams.Builder()
-    .setToolbarColor(toolbarColor)
-    .build()
-
-  val customTabsIntent = CustomTabsIntent.Builder()
-    .setDefaultColorSchemeParams(colors)
-    // ページタイトルを出して、どのサイトを見ているかを分かりやすくする
-    .setShowTitle(true)
-    .setUrlBarHidingEnabled(false)
-    .build()
-
-  try {
-    // Activity 以外の Context だと別タスクで開いてしまい、戻る導線がなくなる
-    customTabsIntent.launchUrl(context.findActivity() ?: context, uri)
-  } catch (e: ActivityNotFoundException) {
-    Log.w(TAG, "Custom Tabs を開けないためブラウザにフォールバックします: $uri", e)
-    openWithExternalApp(context, uri)
-  }
-}
-
-/**
- * `tel:` / `mailto:` などの URI を対応するアプリで開く。
- *
- * 電話は [Intent.ACTION_DIAL]（ダイヤル画面を開くだけ）を使う。
- * [Intent.ACTION_CALL] は即座に発信してしまい `CALL_PHONE` 権限も必要になるため使わない。
- */
-private fun openWithExternalApp(context: Context, uri: Uri) {
-  val action = when (LinkPolicy.externalIntentFor(uri.scheme)) {
-    ExternalIntent.DIAL -> Intent.ACTION_DIAL
-    ExternalIntent.SEND_TO -> Intent.ACTION_SENDTO
-    ExternalIntent.VIEW -> Intent.ACTION_VIEW
-  }
-  val intent = Intent(action, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-  try {
-    context.startActivity(intent)
-  } catch (e: ActivityNotFoundException) {
-    Log.w(TAG, "この URI を開けるアプリがありません: $uri", e)
-    Toast.makeText(context, "対応するアプリが見つかりませんでした", Toast.LENGTH_SHORT).show()
-  }
-}
 
 /** アプリの配色。既定は [SYSTEM]（端末のダークモード設定に追従）。 */
 enum class AppTheme {
@@ -159,7 +88,7 @@ class MainActivity : ComponentActivity() {
       // ステータスバー / ナビゲーションバーのアイコン色を配色に追従させる
       val view = LocalView.current
       LaunchedEffect(darkTheme) {
-        val window = (view.context as Activity).window
+        val window = view.context.findActivity()?.window ?: return@LaunchedEffect
         WindowCompat.getInsetsController(window, view).apply {
           isAppearanceLightStatusBars = !darkTheme
           isAppearanceLightNavigationBars = !darkTheme
@@ -191,19 +120,21 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
   // Custom Tabs のツールバーもアプリと同じ配色にして、アプリ内の表示だと分かるようにする
-  val toolbarColor = MaterialTheme.colorScheme.surface.toArgb()
+  val configuration = LocalConfiguration.current
+  val density = LocalDensity.current
+  val tabStyle = CustomTabStyle(
+    toolbarColor = MaterialTheme.colorScheme.surface.toArgb(),
+    // 部分表示は画面の 7 割程度にして、下にアプリが見えるようにする
+    partialHeightPx = with(density) { (configuration.screenHeightDp.dp * 0.7f).roundToPx() },
+  )
 
   // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
   val currentOpenExternal by rememberUpdatedState<(String, ExternalOpenMode) -> Unit> { url, mode ->
-    val uri = url.toUri()
-    if (!LinkPolicy.isBrowsableUrl(uri.scheme)) {
-      Log.w(TAG, "ブラウザで開けない URL のため無視します: $url")
-      return@rememberUpdatedState
-    }
-    when (mode) {
-      ExternalOpenMode.IN_APP_OVERLAY -> overlayUrl = url
-      ExternalOpenMode.CUSTOM_TAB -> openInCustomTab(localContext, uri, toolbarColor)
+    if (mode == ExternalOpenMode.IN_APP_OVERLAY) {
+      if (LinkPolicy.isBrowsableUrl(url.toUri().scheme)) overlayUrl = url
+    } else {
+      openExternalLink(localContext, url, mode, tabStyle)
     }
   }
 
@@ -228,8 +159,48 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
           WebView.setWebContentsDebuggingEnabled(true)
           settings.cacheMode = WebSettings.LOAD_NO_CACHE
           settings.javaScriptEnabled = true
+          // window.open() / target="_blank" を onCreateWindow で受け取れるようにする。
+          // 無効（既定）のままだと同じ WebView に読み込まれてしまう。
+          settings.setSupportMultipleWindows(true)
           // 読み込み完了までの白い一瞬を防ぐ
           setBackgroundColor(backgroundColor)
+
+          // window.open() は shouldOverrideUrlLoading を通らないため、ここで受け取って
+          // 通常のリンクと同じ経路（Custom Tabs / 外部アプリ）に流す
+          webChromeClient = object : WebChromeClient() {
+            override fun onCreateWindow(
+              view: WebView?,
+              isDialog: Boolean,
+              isUserGesture: Boolean,
+              resultMsg: Message?,
+            ): Boolean {
+              val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+
+              // 遷移先 URL を知る手段がないため、捨てる前提の WebView に一度渡して受け取る
+              val probe = WebView(context)
+              probe.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                  probeView: WebView?,
+                  request: WebResourceRequest?,
+                ): Boolean {
+                  request?.url?.let { popupUrl ->
+                    openExternalLink(
+                      context,
+                      popupUrl.toString(),
+                      ExternalOpenMode.CUSTOM_TAB,
+                      tabStyle,
+                    )
+                  }
+                  probeView?.destroy()
+                  return true
+                }
+              }
+
+              transport.webView = probe
+              resultMsg.sendToTarget()
+              return true
+            }
+          }
 
           webViewClient = object : WebViewClient() {
             /**
@@ -244,7 +215,10 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               val uri = request?.url ?: return false
               when (LinkPolicy.resolve(uri.scheme, uri.host, targetHost)) {
                 Navigation.IN_WEB_VIEW -> return false
-                Navigation.CUSTOM_TAB -> openInCustomTab(context, uri, toolbarColor)
+
+                Navigation.CUSTOM_TAB ->
+                  openExternalLink(context, uri.toString(), ExternalOpenMode.CUSTOM_TAB, tabStyle)
+
                 Navigation.EXTERNAL_APP -> openWithExternalApp(context, uri)
               }
               return true

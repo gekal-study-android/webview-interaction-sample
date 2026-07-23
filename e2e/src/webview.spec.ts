@@ -38,12 +38,9 @@ test.beforeEach(async ({ page }) => {
       simulateLoadError: () => {
         (window as any).__pageCalls = [...((window as any).__pageCalls ?? []), 'simulateLoadError'];
       },
-      // 外部サイトの開き方は 2 通りあり、どちらが呼ばれたかを記録する
-      openInAppBrowser: (url: string) => {
-        (window as any).__externalCalls = [...((window as any).__externalCalls ?? []), ['openInAppBrowser', url]];
-      },
-      openInCustomTab: (url: string) => {
-        (window as any).__externalCalls = [...((window as any).__externalCalls ?? []), ['openInCustomTab', url]];
+      // 外部サイトの開き方は複数あり、どれが指定されたかを記録する
+      openExternalLink: (url: string, mode: string) => {
+        (window as any).__externalCalls = [...((window as any).__externalCalls ?? []), [mode, url]];
       },
     };
   });
@@ -128,23 +125,56 @@ test.describe('リンクの種類', () => {
       await expect(page.getByRole('link', { name: new RegExp(label) })).toHaveAttribute('href', href);
     });
   }
+});
 
+test.describe('外部リンクの開き方', () => {
   const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
+  const APP_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
-  test('should offer both ways of opening an external site', async ({ page }) => {
+  // ボタンのラベル -> ネイティブに渡す ExternalOpenMode と URL
+  const MODES: Array<[string, string, string]> = [
+    ['アプリ内オーバーレイ', 'IN_APP_OVERLAY', EXTERNAL_URL],
+    ['Custom Tabs（全画面）', 'CUSTOM_TAB', EXTERNAL_URL],
+    ['Custom Tabs（部分表示）', 'PARTIAL_CUSTOM_TAB', EXTERNAL_URL],
+    ['Custom Tabs（事前ウォームアップ）', 'WARMED_CUSTOM_TAB', EXTERNAL_URL],
+    ['対応アプリで開く（App Links）', 'APP_LINK', APP_LINK_URL],
+    ['アプリを選ばせる', 'BROWSER_CHOOSER', EXTERNAL_URL],
+    ['別タスクとして開く', 'NEW_DOCUMENT', EXTERNAL_URL],
+    ['intent:// で開く', 'INTENT_URI', ''],
+    ['Trusted Web Activity', 'TRUSTED_WEB_ACTIVITY', EXTERNAL_URL],
+  ];
+
+  for (const [label, mode, url] of MODES) {
+    test(`should pass ${mode} to the native side`, async ({ page }) => {
+      await openDemo(page);
+
+      await page.getByRole('button', { name: label, exact: true }).click();
+
+      await expect.poll(() => externalCalls(page)).toHaveLength(1);
+      const calls = await externalCalls(page);
+
+      expect(calls[0][0]).toBe(mode);
+      if (url) {
+        expect(calls[0][1]).toBe(url);
+      } else {
+        // intent:// はフォールバック URL を含む
+        expect(calls[0][1]).toContain('intent://');
+      }
+    });
+  }
+
+  test('should route window.open() through the native side', async ({ page }) => {
     await openDemo(page);
 
-    // 外部サイトは WebView 内に読み込ませないため、ネイティブに開き方を指定して渡す
-    await page.getByRole('button', { name: 'アプリ内オーバーレイで開く' }).click();
-    await expect.poll(() => externalCalls(page)).toEqual([['openInAppBrowser', EXTERNAL_URL]]);
+    // ブラウザでは本物のポップアップが開くため、外部への通信は遮断する
+    await page.route('https://developer.android.com/**', (route) => route.abort());
 
-    await page.getByRole('button', { name: 'Custom Tabs で開く' }).click();
-    await expect
-      .poll(() => externalCalls(page))
-      .toEqual([
-        ['openInAppBrowser', EXTERNAL_URL],
-        ['openInCustomTab', EXTERNAL_URL],
-      ]);
+    // ポップアップは shouldOverrideUrlLoading を通らず onCreateWindow で受け取られる
+    const popup = page.waitForEvent('popup').catch(() => null);
+    await page.getByRole('button', { name: 'window.open() で開く' }).click();
+
+    await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('window.open(')).toBeVisible();
+    await (await popup)?.close();
   });
 });
 
