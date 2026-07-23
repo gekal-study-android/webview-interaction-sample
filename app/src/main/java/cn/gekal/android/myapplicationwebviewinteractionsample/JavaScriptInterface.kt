@@ -47,16 +47,14 @@ class JavaScriptInterface(
     }
   }
 
-  /** 外部サイトをアプリ内オーバーレイ（2 つ目の WebView）で開く。 */
+  /**
+   * 外部リンクを指定した方式で開く。
+   *
+   * @param mode [ExternalOpenMode] の名前（大文字小文字は問わない）。未知の値は Custom Tabs にする。
+   */
   @JavascriptInterface
-  fun openInAppBrowser(url: String) {
-    mainHandler.post { onOpenExternal(url, ExternalOpenMode.IN_APP_OVERLAY) }
-  }
-
-  /** 外部サイトを Custom Tabs で開く。 */
-  @JavascriptInterface
-  fun openInCustomTab(url: String) {
-    mainHandler.post { onOpenExternal(url, ExternalOpenMode.CUSTOM_TAB) }
+  fun openExternalLink(url: String, mode: String) {
+    mainHandler.post { onOpenExternal(url, ExternalOpenMode.from(mode)) }
   }
 
   /** 現在のページを再読み込みする。 */

@@ -50,6 +50,31 @@ class LinkPolicyTest {
   }
 
   @Test
+  fun `intent スキームは INTENT_URI のときだけ許可する`() {
+    // intent:// は任意のコンポーネントを起動しうるため、明示的に選んだときだけ通す
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.INTENT_URI, "intent"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.INTENT_URI, "https"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.CUSTOM_TAB, "intent"))
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.CUSTOM_TAB, "https"))
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.IN_APP_OVERLAY, "http"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.PARTIAL_CUSTOM_TAB, "javascript"))
+  }
+
+  @Test
+  fun `開き方の名前を変換し、未知の値は Custom Tabs にする`() {
+    assertEquals(ExternalOpenMode.PARTIAL_CUSTOM_TAB, ExternalOpenMode.from("PARTIAL_CUSTOM_TAB"))
+    assertEquals(ExternalOpenMode.APP_LINK, ExternalOpenMode.from("app_link"))
+    assertEquals(
+      ExternalOpenMode.TRUSTED_WEB_ACTIVITY,
+      ExternalOpenMode.from("Trusted_Web_Activity"),
+    )
+    // WebView から任意の文字列が来ても壊れないこと
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from("nope"))
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from(null))
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from(""))
+  }
+
+  @Test
   fun `スキームごとに使う Intent の種類が決まる`() {
     // 発信は DIAL（ダイヤル画面を開くだけ）。CALL は権限が必要で即発信になるため使わない
     assertEquals(ExternalIntent.DIAL, LinkPolicy.externalIntentFor("tel"))

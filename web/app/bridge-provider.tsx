@@ -59,8 +59,7 @@ const KNOWN_METHODS: BridgeMethod[] = [
   'setAppTheme',
   'reloadPage',
   'simulateLoadError',
-  'openInAppBrowser',
-  'openInCustomTab',
+  'openExternalLink',
 ];
 
 const timestamp = () =>
