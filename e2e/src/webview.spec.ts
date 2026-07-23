@@ -130,6 +130,8 @@ test.describe('リンクの種類', () => {
 test.describe('外部リンクの開き方', () => {
   const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
   const APP_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+  // TWA は自サイトを開く（assetlinks.json で検証できるのが自分のオリジンだけのため）
+  const OWN_SITE_URL = 'https://webview-interaction-sample.demo.gekal.cn/';
 
   // ボタンのラベル -> ネイティブに渡す ExternalOpenMode と URL
   const MODES: Array<[string, string, string]> = [
@@ -141,7 +143,7 @@ test.describe('外部リンクの開き方', () => {
     ['アプリを選ばせる', 'BROWSER_CHOOSER', EXTERNAL_URL],
     ['別タスクとして開く', 'NEW_DOCUMENT', EXTERNAL_URL],
     ['intent:// で開く', 'INTENT_URI', ''],
-    ['Trusted Web Activity', 'TRUSTED_WEB_ACTIVITY', EXTERNAL_URL],
+    ['Trusted Web Activity', 'TRUSTED_WEB_ACTIVITY', OWN_SITE_URL],
   ];
 
   for (const [label, mode, url] of MODES) {

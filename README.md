@@ -77,19 +77,22 @@ gh variable list --repo gekal-study-android/webview-interaction-sample --env app
 
 WebView が読み込むコンテンツは Next.js の静的エクスポート (`output: 'export'`) で生成し、GitHub Actions から GitHub Pages へデプロイしています。
 
-- URL: <https://gekal-study-android.github.io/webview-interaction-sample/index.html>
+- URL: <https://webview-interaction-sample.demo.gekal.cn/index.html>（カスタムドメイン。ルート配信）
 - ソース: `web/`（App Router + TypeScript + MUI）
 - デプロイ: `.github/workflows/pages.yml`（`main` への push で自動デプロイ / PR ではビルド検証のみ）
 
-プロジェクトサイト配信のため `next.config.ts` で `basePath: '/webview-interaction-sample'` を指定しています。
-サイトルート配信で確認したい場合は `BASE_PATH=` を指定してビルドしてください。
+カスタムドメインでルート配信しているため `basePath` は空です（`web/base-path.ts`）。
+`<user>.github.io/<repo>/` 形式に戻す場合は `BASE_PATH=/webview-interaction-sample` を指定してビルドしてください。
+
+`web/public/CNAME` と `web/public/.well-known/assetlinks.json` は成果物にそのまま含まれます。
+後者は Trusted Web Activity の検証に使います（[詳細](web/public/.well-known/README.md)）。
 
 ### ローカルでの開発
 
 ```shell
 cd web
 pnpm install
-pnpm dev    # http://localhost:3000/webview-interaction-sample
+pnpm dev    # http://localhost:3000
 ```
 
 ### 静的エクスポートのビルド
