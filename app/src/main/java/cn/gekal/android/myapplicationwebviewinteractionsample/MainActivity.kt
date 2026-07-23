@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
+import androidx.core.net.toUri
 
 private const val TAG = "MainActivity"
 
@@ -162,7 +163,7 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   val targetUrl = BuildConfig.WEBVIEW_URL
 
   // 配信元のホスト。これ以外の http(s) は端末のブラウザで開く
-  val targetHost = remember(targetUrl) { Uri.parse(targetUrl).host }
+  val targetHost = remember(targetUrl) { targetUrl.toUri().host }
 
   // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
   val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
