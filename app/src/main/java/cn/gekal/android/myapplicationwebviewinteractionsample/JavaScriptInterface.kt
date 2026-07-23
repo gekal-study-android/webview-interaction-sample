@@ -29,6 +29,7 @@ class JavaScriptInterface(
   private val context: Context,
   private val webView: WebView,
   private val onAppThemeChanged: (String) -> Unit = {},
+  private val onOpenExternal: (url: String, mode: ExternalOpenMode) -> Unit = { _, _ -> },
 ) {
   private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -44,6 +45,18 @@ class JavaScriptInterface(
       Toast.makeText(context, message, duration).show()
       webView.evaluateJavascript("javascript: handleReturnValue('Hello from Android!')", null)
     }
+  }
+
+  /** 外部サイトをアプリ内オーバーレイ（2 つ目の WebView）で開く。 */
+  @JavascriptInterface
+  fun openInAppBrowser(url: String) {
+    mainHandler.post { onOpenExternal(url, ExternalOpenMode.IN_APP_OVERLAY) }
+  }
+
+  /** 外部サイトを Custom Tabs で開く。 */
+  @JavascriptInterface
+  fun openInCustomTab(url: String) {
+    mainHandler.post { onOpenExternal(url, ExternalOpenMode.CUSTOM_TAB) }
   }
 
   /** 現在のページを再読み込みする。 */

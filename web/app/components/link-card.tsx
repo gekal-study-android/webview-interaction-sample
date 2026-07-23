@@ -1,8 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -10,6 +11,8 @@ import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import EmailIcon from '@mui/icons-material/Email';
+import LayersIcon from '@mui/icons-material/Layers';
+import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import LinkIcon from '@mui/icons-material/Link';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -24,8 +27,6 @@ interface LinkSample {
   href: string;
   /** ネイティブ側がどう扱うかの説明。 */
   handledBy: string;
-  /** 外部サイトはブラウザで新しいタブを開く。 */
-  external?: boolean;
 }
 
 const LINKS: LinkSample[] = [
@@ -47,17 +48,13 @@ const LINKS: LinkSample[] = [
     href: 'geo:35.681236,139.767125?q=東京駅',
     handledBy: 'ACTION_VIEW で地図アプリへ',
   },
-  {
-    icon: <OpenInNewIcon />,
-    label: '外部サイトを開く',
-    href: 'https://developer.android.com/develop/ui/views/layout/webapps/webview',
-    handledBy: 'Custom Tabs でアプリの上に重ねて表示',
-    external: true,
-  },
 ];
 
+/** 外部サイトの表示方法を見比べるためのサンプル URL。 */
+const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
+
 export function LinkCard() {
-  const { log } = useBridge();
+  const { log, hydrated, callNative } = useBridge();
 
   return (
     <SectionCard
@@ -74,8 +71,6 @@ export function LinkCard() {
               key={link.href}
               component="a"
               href={link.href}
-              target={link.external ? '_blank' : undefined}
-              rel={link.external ? 'noopener noreferrer' : undefined}
               disableGutters
               sx={{ borderRadius: 2, px: 1 }}
               // 遷移はネイティブ側が横取りするため、Web からは記録だけ行う
@@ -90,18 +85,7 @@ export function LinkCard() {
             >
               <ListItemIcon sx={{ minWidth: 36, color: 'primary.main' }}>{link.icon}</ListItemIcon>
               <ListItemText
-                primary={
-                  link.external ? (
-                    <>
-                      {link.label}
-                      <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
-                        {new URL(link.href).host}
-                      </Typography>
-                    </>
-                  ) : (
-                    link.label
-                  )
-                }
+                primary={link.label}
                 secondary={link.handledBy}
                 slotProps={{
                   primary: { variant: 'body2', sx: { fontWeight: 600 } },
@@ -118,10 +102,51 @@ export function LinkCard() {
           ))}
         </List>
 
-        <Alert severity="info" variant="outlined" icon={<OpenInNewIcon fontSize="small" />}>
-          外部サイトは WebView 内には表示しません。URL バーの出る Custom Tabs
-          でアプリの上に重ねて開くため、接続先が分かり、閉じれば元の画面に戻ります。
-        </Alert>
+        <Divider />
+
+        <Stack spacing={1.25}>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="subtitle2">外部サイトの開き方</Typography>
+            <Chip
+              size="small"
+              variant="outlined"
+              icon={<OpenInNewIcon />}
+              label={new URL(EXTERNAL_URL).host}
+              sx={{ height: 22, fontSize: 11 }}
+            />
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            外部サイトは WebView 内には表示しません。2 つの方式を見比べられます。
+          </Typography>
+
+          <Button
+            variant="contained"
+            startIcon={<LayersIcon />}
+            onClick={() => callNative('openInAppBrowser', [EXTERNAL_URL])}
+            disabled={!hydrated}
+            fullWidth
+          >
+            アプリ内オーバーレイで開く
+          </Button>
+          <Typography variant="caption" color="text.secondary">
+            2 つ目の WebView
+            を現在の画面に重ねます。ブラウザに依存せず見た目が一定で、ヘッダーに接続先ホストと閉じるボタンが出ます。
+          </Typography>
+
+          <Button
+            variant="outlined"
+            startIcon={<OpenInBrowserIcon />}
+            onClick={() => callNative('openInCustomTab', [EXTERNAL_URL])}
+            disabled={!hydrated}
+            fullWidth
+          >
+            Custom Tabs で開く
+          </Button>
+          <Typography variant="caption" color="text.secondary">
+            描画するのはブラウザアプリ本体で、アプリと同じタスクに開きます。OAuth
+            ではこちらが推奨されます。対応ブラウザがない端末では通常のブラウザ起動になります。
+          </Typography>
+        </Stack>
 
         <Typography variant="caption" color="text.secondary">
           電話（<code>tel:</code>）は「表示サンプル」にあります。ネイティブは <code>shouldOverrideUrlLoading</code>{' '}

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -23,6 +24,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -49,16 +51,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
-import androidx.core.net.toUri
 
 private const val TAG = "MainActivity"
+
+/** [ContextWrapper] をたどって Activity を取り出す。 */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> baseContext.findActivity()
+  else -> null
+}
 
 /**
  * 外部サイトを Custom Tabs（アプリ内ブラウザ）でアプリの上に重ねて開く。
@@ -68,6 +78,15 @@ private const val TAG = "MainActivity"
  * 対応ブラウザがない端末では通常のブラウザ起動にフォールバックする。
  */
 private fun openInCustomTab(context: Context, uri: Uri, toolbarColor: Int) {
+  // Custom Tabs を描画するのはブラウザアプリ本体。対応ブラウザがない端末では
+  // CustomTabsIntent のエクストラが無視され、ただのブラウザ起動に「静かに」なる。
+  // 何が起きたか分かるよう、その場合はログとトーストで知らせる。
+  val provider = CustomTabsClient.getPackageName(context, null)
+  if (provider == null) {
+    Log.w(TAG, "Custom Tabs 対応ブラウザが見つかりません。通常のブラウザで開きます: $uri")
+    Toast.makeText(context, "Custom Tabs 対応ブラウザがないため、通常のブラウザで開きます", Toast.LENGTH_LONG).show()
+  }
+
   val colors = CustomTabColorSchemeParams.Builder()
     .setToolbarColor(toolbarColor)
     .build()
@@ -80,7 +99,8 @@ private fun openInCustomTab(context: Context, uri: Uri, toolbarColor: Int) {
     .build()
 
   try {
-    customTabsIntent.launchUrl(context, uri)
+    // Activity 以外の Context だと別タスクで開いてしまい、戻る導線がなくなる
+    customTabsIntent.launchUrl(context.findActivity() ?: context, uri)
   } catch (e: ActivityNotFoundException) {
     Log.w(TAG, "Custom Tabs を開けないためブラウザにフォールバックします: $uri", e)
     openWithExternalApp(context, uri)
@@ -160,17 +180,32 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   var loadState by remember { mutableStateOf<LoadState>(LoadStateReducer.onLoadRequested()) }
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+  // null 以外のとき、この URL をアプリ内オーバーレイで表示する
+  var overlayUrl by remember { mutableStateOf<String?>(null) }
   val targetUrl = BuildConfig.WEBVIEW_URL
 
   // 配信元のホスト。これ以外の http(s) は端末のブラウザで開く
   val targetHost = remember(targetUrl) { targetUrl.toUri().host }
 
-  // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
-  val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
+  val localContext = LocalContext.current
   val backgroundColor = MaterialTheme.colorScheme.background.toArgb()
 
   // Custom Tabs のツールバーもアプリと同じ配色にして、アプリ内の表示だと分かるようにする
   val toolbarColor = MaterialTheme.colorScheme.surface.toArgb()
+
+  // factory は一度しか実行されないため、最新のコールバックを参照できるようにする
+  val currentOnAppThemeChanged by rememberUpdatedState(onAppThemeChanged)
+  val currentOpenExternal by rememberUpdatedState<(String, ExternalOpenMode) -> Unit> { url, mode ->
+    val uri = url.toUri()
+    if (!LinkPolicy.isBrowsableUrl(uri.scheme)) {
+      Log.w(TAG, "ブラウザで開けない URL のため無視します: $url")
+      return@rememberUpdatedState
+    }
+    when (mode) {
+      ExternalOpenMode.IN_APP_OVERLAY -> overlayUrl = url
+      ExternalOpenMode.CUSTOM_TAB -> openInCustomTab(localContext, uri, toolbarColor)
+    }
+  }
 
   val startLoad: (String) -> Unit = { url ->
     loadState = LoadStateReducer.onLoadRequested()
@@ -285,6 +320,7 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
               context = context,
               webView = this,
               onAppThemeChanged = { currentOnAppThemeChanged(AppTheme.from(it)) },
+              onOpenExternal = { url, mode -> currentOpenExternal(url, mode) },
             ),
             "AndroidInterface",
           )
@@ -306,6 +342,11 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
       is LoadState.Loading -> LoadingView()
       is LoadState.Error -> ErrorView(detail = state.detail, onRetry = { startLoad(targetUrl) })
       is LoadState.Loaded -> Unit
+    }
+
+    // 外部サイトを現在の WebView の上に重ねて表示する
+    overlayUrl?.let { url ->
+      InAppBrowser(url = url, onClose = { overlayUrl = null })
     }
   }
 }

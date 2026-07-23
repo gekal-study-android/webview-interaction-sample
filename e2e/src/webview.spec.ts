@@ -38,12 +38,20 @@ test.beforeEach(async ({ page }) => {
       simulateLoadError: () => {
         (window as any).__pageCalls = [...((window as any).__pageCalls ?? []), 'simulateLoadError'];
       },
+      // 外部サイトの開き方は 2 通りあり、どちらが呼ばれたかを記録する
+      openInAppBrowser: (url: string) => {
+        (window as any).__externalCalls = [...((window as any).__externalCalls ?? []), ['openInAppBrowser', url]];
+      },
+      openInCustomTab: (url: string) => {
+        (window as any).__externalCalls = [...((window as any).__externalCalls ?? []), ['openInCustomTab', url]];
+      },
     };
   });
 });
 
 const appThemeCalls = (page: Page) => page.evaluate(() => (window as any).__appThemeCalls ?? []);
 const pageCalls = (page: Page) => page.evaluate(() => (window as any).__pageCalls ?? []);
+const externalCalls = (page: Page) => page.evaluate(() => (window as any).__externalCalls ?? []);
 
 const openDemo = async (page: Page) => {
   await page.goto(WEBVIEW_URL);
@@ -112,7 +120,6 @@ test.describe('リンクの種類', () => {
     ['メールを作成', 'mailto:support@example.com?subject=WebView%20Interaction%20Sample'],
     ['SMS を作成', 'sms:+81312345678?body=WebView%20Interaction%20Sample'],
     ['地図で開く', 'geo:35.681236,139.767125?q=東京駅'],
-    ['外部サイトを開く', 'https://developer.android.com/develop/ui/views/layout/webapps/webview'],
   ];
 
   for (const [label, href] of CASES) {
@@ -122,12 +129,22 @@ test.describe('リンクの種類', () => {
     });
   }
 
-  test('should open only the external site in a new tab', async ({ page }) => {
+  const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
+
+  test('should offer both ways of opening an external site', async ({ page }) => {
     await openDemo(page);
 
-    // WebView 内で遷移させないよう、外部サイトだけ target="_blank" にしている
-    await expect(page.getByRole('link', { name: /外部サイトを開く/ })).toHaveAttribute('target', '_blank');
-    await expect(page.getByRole('link', { name: /メールを作成/ })).not.toHaveAttribute('target', '_blank');
+    // 外部サイトは WebView 内に読み込ませないため、ネイティブに開き方を指定して渡す
+    await page.getByRole('button', { name: 'アプリ内オーバーレイで開く' }).click();
+    await expect.poll(() => externalCalls(page)).toEqual([['openInAppBrowser', EXTERNAL_URL]]);
+
+    await page.getByRole('button', { name: 'Custom Tabs で開く' }).click();
+    await expect
+      .poll(() => externalCalls(page))
+      .toEqual([
+        ['openInAppBrowser', EXTERNAL_URL],
+        ['openInCustomTab', EXTERNAL_URL],
+      ]);
   });
 });
 

@@ -15,6 +15,15 @@ enum class Navigation {
   EXTERNAL_APP,
 }
 
+/** 外部サイトの開き方。WebView 側から明示的に指定できるようにしている。 */
+enum class ExternalOpenMode {
+  /** アプリ内オーバーレイ（2 つ目の WebView）。ブラウザに依存せず見た目が一定。 */
+  IN_APP_OVERLAY,
+
+  /** Custom Tabs。ブラウザアプリが描画するため、実サービスのログインでも使える。 */
+  CUSTOM_TAB,
+}
+
 /** 外部アプリに渡すときに使う Intent の種類。実際の action への変換は呼び出し側で行う。 */
 enum class ExternalIntent {
   /** 電話番号を入れたダイヤル画面を開く（発信はしない）。 */
@@ -50,6 +59,12 @@ object LinkPolicy {
     val isSameHost = targetHost != null && host.equals(targetHost, ignoreCase = true)
     return if (isSameHost) Navigation.IN_WEB_VIEW else Navigation.CUSTOM_TAB
   }
+
+  /**
+   * WebView から渡された URL をブラウザ表示に使ってよいか。
+   * `javascript:` や `file:` などを開かせないよう、http(s) だけを許可する。
+   */
+  fun isBrowsableUrl(scheme: String?): Boolean = scheme?.lowercase() in WEB_SCHEMES
 
   fun externalIntentFor(scheme: String?): ExternalIntent = when (scheme?.lowercase()) {
     "tel" -> ExternalIntent.DIAL
