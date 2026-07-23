@@ -303,7 +303,9 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
         }
       },
       update = {
-        it.visibility = if (loadState is LoadState.Error) {
+        // オーバーレイ表示中は下の WebView を隠す。
+        // 出したままだと AndroidView 同士でタッチと描画が競合し、操作を受け付けなくなる。
+        it.visibility = if (loadState is LoadState.Error || overlayUrl != null) {
           android.view.View.GONE
         } else {
           android.view.View.VISIBLE
