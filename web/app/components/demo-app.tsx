@@ -17,6 +17,7 @@ import { EventLogCard } from './event-log-card';
 import { NativeCallbackCard } from './native-callback-card';
 import { SystemCard } from './system-card';
 import { TextSampleCard } from './text-sample-card';
+import { ThemeGate } from './theme-gate';
 import { ToastCard } from './toast-card';
 
 /**
@@ -59,23 +60,25 @@ export function DemoApp() {
   return (
     <BridgeProvider>
       <NativeThemeSync />
-      <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
-        <AppHeader />
-        <Container maxWidth="sm" component="main" sx={{ py: 3 }}>
-          <Stack spacing={2}>
-            <ToastCard />
-            <NativeCallbackCard />
-            <DeviceInfoCard />
-            <SystemCard />
-            <EnvironmentCard />
-            <TextSampleCard />
-            <EventLogCard />
-          </Stack>
-          <Typography variant="caption" color="text.disabled" component="p" sx={{ mt: 3, textAlign: 'center' }}>
-            Next.js (静的エクスポート) + MUI / GitHub Pages で配信
-          </Typography>
-        </Container>
-      </Box>
+      <ThemeGate>
+        <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
+          <AppHeader />
+          <Container maxWidth="sm" component="main" sx={{ py: 3 }}>
+            <Stack spacing={2}>
+              <ToastCard />
+              <NativeCallbackCard />
+              <DeviceInfoCard />
+              <SystemCard />
+              <EnvironmentCard />
+              <TextSampleCard />
+              <EventLogCard />
+            </Stack>
+            <Typography variant="caption" color="text.disabled" component="p" sx={{ mt: 3, textAlign: 'center' }}>
+              Next.js (静的エクスポート) + MUI / GitHub Pages で配信
+            </Typography>
+          </Container>
+        </Box>
+      </ThemeGate>
       <NoticeSnackbar />
     </BridgeProvider>
   );

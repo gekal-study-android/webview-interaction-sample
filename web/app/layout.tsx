@@ -5,6 +5,7 @@ import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { ThemeProvider } from '@mui/material/styles';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 
+import { BootStyle } from './boot-style';
 import theme from './theme';
 
 export const metadata: Metadata = {
@@ -24,6 +25,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja" suppressHydrationWarning>
+      <head>
+        <BootStyle />
+      </head>
       <body>
         <InitColorSchemeScript attribute="class" defaultMode="system" />
         <AppRouterCacheProvider options={{ key: 'mui' }}>
