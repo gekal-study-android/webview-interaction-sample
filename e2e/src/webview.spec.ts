@@ -165,18 +165,49 @@ test.describe('外部リンクの開き方', () => {
     });
   }
 
-  test('should route window.open() through the native side', async ({ page }) => {
+  // window.open の戻り値は Android WebView とブラウザで挙動が違う（実機は null になりうる）。
+  // 挙動に依存せずロジックを検証するため、window.open をスタブして戻り値を固定する。
+  test('should not warn when the bridge is present even if window.open returns null', async ({ page }) => {
+    // ブリッジあり（＝WebView 相当）。ネイティブが onCreateWindow で処理し、戻り値は null になりうる
+    await page.addInitScript(() => {
+      window.open = () => null;
+    });
     await openDemo(page);
 
-    // ブラウザでは本物のポップアップが開くため、外部への通信は遮断する
-    await page.route('https://developer.android.com/**', (route) => route.abort());
+    await page.getByRole('button', { name: 'window.open() で開く' }).click();
 
-    // ポップアップは shouldOverrideUrlLoading を通らず onCreateWindow で受け取られる
-    const popup = page.waitForEvent('popup').catch(() => null);
+    // 呼び出しはログに残るが、戻り値が null でも誤ってブロック警告を出さない。
+    // log() と notify() は同じハンドラ内で呼ばれ同時に描画されるため、ログが出た時点で
+    // 警告があるかを一発（リトライなし）で判定する。自動で消える前に確実に捕まえる。
+    await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('window.open(')).toBeVisible();
+    expect(await page.getByText('ブロックされました').count()).toBe(0);
+  });
+
+  test('should warn about a real popup block only in a plain browser', async ({ page }) => {
+    // ブリッジなし（素のブラウザ）で、window.open がブロックされて null を返す状況
+    await page.addInitScript(() => {
+      delete (window as any).AndroidInterface;
+      window.open = () => null;
+    });
+    await page.goto(WEBVIEW_URL);
+
+    await page.getByRole('button', { name: 'window.open() で開く' }).click();
+
+    await expect(page.getByText('ブラウザにポップアップをブロックされました')).toBeVisible();
+  });
+
+  test('should not warn in a plain browser when the popup opens', async ({ page }) => {
+    // ブリッジなしでも、window.open が成功（非 null）ならブロック警告は出さない
+    await page.addInitScript(() => {
+      delete (window as any).AndroidInterface;
+      window.open = () => ({ closed: false }) as unknown as Window;
+    });
+    await page.goto(WEBVIEW_URL);
+
     await page.getByRole('button', { name: 'window.open() で開く' }).click();
 
     await expect(page.getByRole('list', { name: 'イベントログ' }).getByText('window.open(')).toBeVisible();
-    await (await popup)?.close();
+    expect(await page.getByText('ブロックされました').count()).toBe(0);
   });
 });
 
