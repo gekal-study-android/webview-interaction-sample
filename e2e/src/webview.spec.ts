@@ -99,6 +99,25 @@ test('should log every interaction between JS and native', async ({ page }) => {
   await expect(log.getByText("handleReturnValue('Hello from Mocked!')")).toBeVisible();
 });
 
+test('should mirror the bridge input and output to the WebView console', async ({ page }) => {
+  // vConsole が拾えるよう、ブリッジの往復を console にも出す
+  const messages: string[] = [];
+  page.on('console', (msg) => messages.push(msg.text()));
+
+  await openDemo(page);
+  await page.getByRole('button', { name: 'Show Toast' }).click();
+
+  // JS → Native（出力）と Native → JS（入力）の両方が出る
+  await expect
+    .poll(() => messages.filter((m) => m.includes('[Bridge]')))
+    .toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("[Bridge] JS → Native: showToast('Hello from WebView!')"),
+        expect.stringContaining("[Bridge] Native → JS: handleReturnValue('Hello from Mocked!')"),
+      ]),
+    );
+});
+
 test('should expose the phone number as a tel: link', async ({ page }) => {
   await openDemo(page);
 
