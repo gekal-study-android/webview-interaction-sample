@@ -22,7 +22,9 @@ fun readVariantConfig(variantName: String): Map<String, Any> {
 
 android {
   namespace = "cn.gekal.android.myapplicationwebviewinteractionsample"
-  compileSdk = 36
+  // androidx.core 1.19 / lifecycle 2.11 が compileSdk 37 以上を要求するため引き上げ（AGP も 9.1 に更新）。
+  // targetSdk は挙動変更を避けて 36 のまま（compileSdk とは独立して更新できる）。
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "cn.gekal.android.myapplicationwebviewinteractionsample"
