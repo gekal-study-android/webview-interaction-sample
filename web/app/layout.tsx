@@ -8,6 +8,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import { basePath } from '../base-path';
 import { BootStyle } from './boot-style';
 import theme from './theme';
+import { VConsoleLoader } from './vconsole-loader';
 
 export const metadata: Metadata = {
   title: 'WebView Example',
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ThemeProvider theme={theme} defaultMode="system">
             <CssBaseline />
             {children}
+            <VConsoleLoader />
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
