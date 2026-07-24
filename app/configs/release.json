@@ -1,6 +1,5 @@
 {
   "$schema": "./schema.json",
   "webview_url": "https://webview-interaction-sample.demo.gekal.cn/index.html?env=release",
-  "vconsole": false,
   "firebase_app_distribution_groups": "gekal"
 }

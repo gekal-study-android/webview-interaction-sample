@@ -2,17 +2,7 @@
 
 import { useEffect } from 'react';
 
-/**
- * vConsole を有効にするか判定する。
- *
- * 有効・無効はネイティブのビルド variant が決める（`app/configs/*.json` → `BuildConfig.VCONSOLE`）。
- * アプリは `?vconsole=1` / `0` を URL に付けて渡すので、ここではそれだけを見る。
- * ブラウザで手元確認するときも `?vconsole=1` で出せる。
- */
-function isEnabled(search: string): boolean {
-  const flag = new URLSearchParams(search).get('vconsole');
-  return flag === '1' || flag === 'true';
-}
+import { isVConsoleEnabled } from './vconsole-config';
 
 /**
  * WebView 上でログとネットワーク通信を確認するための vConsole を読み込む。
@@ -22,7 +12,7 @@ function isEnabled(search: string): boolean {
  */
 export function VConsoleLoader() {
   useEffect(() => {
-    if (!isEnabled(window.location.search)) {
+    if (!isVConsoleEnabled(window.location.search)) {
       return;
     }
 

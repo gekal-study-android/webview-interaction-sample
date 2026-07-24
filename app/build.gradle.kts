@@ -51,11 +51,6 @@ android {
         "WEBVIEW_URL",
         "\"${config["webview_url"]}\"",
       )
-      buildConfigField(
-        "boolean",
-        "VCONSOLE",
-        "${config["vconsole"] as? Boolean ?: false}",
-      )
     }
 
     release {
@@ -64,11 +59,6 @@ android {
         "String",
         "WEBVIEW_URL",
         "\"${config["webview_url"]}\"",
-      )
-      buildConfigField(
-        "boolean",
-        "VCONSOLE",
-        "${config["vconsole"] as? Boolean ?: false}",
       )
       isMinifyEnabled = false
       signingConfig = signingConfigs.getByName("release")

@@ -10,6 +10,7 @@ import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 
 import { useBridge } from '../bridge-provider';
 import { monoFontFamily } from '../theme';
+import { isVConsoleEnabled } from '../vconsole-config';
 import { SectionCard } from './section-card';
 
 interface WebEnvironment {
@@ -19,12 +20,6 @@ interface WebEnvironment {
   pixelRatio: string;
   language: string;
   vConsole: boolean;
-}
-
-/** vConsole が有効か（vconsole-loader.tsx と同じ判定）。 */
-function isVConsoleEnabled(search: string): boolean {
-  const flag = new URLSearchParams(search).get('vconsole');
-  return flag === '1' || flag === 'true';
 }
 
 export function EnvironmentCard() {
