@@ -10,6 +10,7 @@ import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 
 import { useBridge } from '../bridge-provider';
 import { monoFontFamily } from '../theme';
+import { isVConsoleEnabled } from '../vconsole-config';
 import { SectionCard } from './section-card';
 
 interface WebEnvironment {
@@ -18,6 +19,7 @@ interface WebEnvironment {
   viewport: string;
   pixelRatio: string;
   language: string;
+  vConsole: boolean;
 }
 
 export function EnvironmentCard() {
@@ -32,12 +34,14 @@ export function EnvironmentCard() {
       viewport: `${window.innerWidth} × ${window.innerHeight}`,
       pixelRatio: String(window.devicePixelRatio),
       language: window.navigator.language,
+      vConsole: isVConsoleEnabled(window.location.search),
     });
   }, []);
 
   const rows: Array<[string, string]> = web
     ? [
         ['env クエリ', web.env],
+        ['vConsole', web.vConsole ? '有効' : '無効'],
         ['ビューポート', web.viewport],
         ['DPR', web.pixelRatio],
         ['言語', web.language],

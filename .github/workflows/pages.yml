@@ -39,6 +39,10 @@ jobs:
       - name: Build static export
         run: pnpm build
         working-directory: web
+        env:
+          # vConsole を有効にするビルド時フラグ。リポジトリ変数 NEXT_PUBLIC_VCONSOLE を
+          # true にすると公開サイトで有効になる（未設定なら無効）。
+          NEXT_PUBLIC_VCONSOLE: ${{ vars.NEXT_PUBLIC_VCONSOLE }}
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

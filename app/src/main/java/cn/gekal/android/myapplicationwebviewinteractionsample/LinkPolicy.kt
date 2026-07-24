@@ -20,8 +20,36 @@ enum class ExternalOpenMode {
   /** アプリ内オーバーレイ（2 つ目の WebView）。ブラウザに依存せず見た目が一定。 */
   IN_APP_OVERLAY,
 
-  /** Custom Tabs。ブラウザアプリが描画するため、実サービスのログインでも使える。 */
+  /** Custom Tabs（全画面）。ブラウザアプリが描画するため、実サービスのログインでも使える。 */
   CUSTOM_TAB,
+
+  /** Custom Tabs をボトムシート状に部分表示する。下にアプリが見えたまま重なる。 */
+  PARTIAL_CUSTOM_TAB,
+
+  /** 事前に接続とウォームアップをしてから開く Custom Tabs。表示が速くなる。 */
+  WARMED_CUSTOM_TAB,
+
+  /** 対応アプリがあればそちらで開き、無ければ Custom Tabs に落とす（App Links）。 */
+  APP_LINK,
+
+  /** 既定のブラウザに直行させず、ユーザーにアプリを選ばせる。 */
+  BROWSER_CHOOSER,
+
+  /** 「最近のアプリ」に別項目として並べて開く。 */
+  NEW_DOCUMENT,
+
+  /** `intent://` URI からアプリを起動する。任意のコンポーネントを起動させないよう要防御。 */
+  INTENT_URI,
+
+  /** Trusted Web Activity。所有を検証したドメインなら URL バーなしの全画面になる。 */
+  TRUSTED_WEB_ACTIVITY,
+  ;
+
+  companion object {
+    /** WebView から渡される文字列を変換する。未知の値は最も無難な [CUSTOM_TAB] にする。 */
+    fun from(value: String?): ExternalOpenMode =
+      entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: CUSTOM_TAB
+  }
 }
 
 /** 外部アプリに渡すときに使う Intent の種類。実際の action への変換は呼び出し側で行う。 */
@@ -65,6 +93,17 @@ object LinkPolicy {
    * `javascript:` や `file:` などを開かせないよう、http(s) だけを許可する。
    */
   fun isBrowsableUrl(scheme: String?): Boolean = scheme?.lowercase() in WEB_SCHEMES
+
+  /**
+   * 開き方ごとに許可するスキーム。
+   * [ExternalOpenMode.INTENT_URI] だけは `intent:` を受け取る必要がある。
+   */
+  fun isAllowedFor(mode: ExternalOpenMode, scheme: String?): Boolean =
+    if (mode == ExternalOpenMode.INTENT_URI) {
+      scheme?.lowercase() == "intent"
+    } else {
+      isBrowsableUrl(scheme)
+    }
 
   fun externalIntentFor(scheme: String?): ExternalIntent = when (scheme?.lowercase()) {
     "tel" -> ExternalIntent.DIAL
