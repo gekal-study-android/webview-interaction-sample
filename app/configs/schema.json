@@ -9,6 +9,10 @@
     },
     "firebase_app_distribution_groups": {
       "type": "string"
+    },
+    "vconsole": {
+      "type": "boolean",
+      "description": "WebView にデバッグ用の vConsole を表示するか"
     }
   },
   "required": [

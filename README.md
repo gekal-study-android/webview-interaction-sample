@@ -25,8 +25,9 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 ### デバッグ (vConsole)
 
 WebView 上でログとネットワーク通信を確認できるよう [vConsole](https://github.com/Tencent/vConsole) を組み込んでいます。
-デバッグビルド（`?env=debug`）で自動的に有効になり、右下のボタンから開けます。
-任意のビルドで `?vconsole=1`（無効化は `?vconsole=0`）でも切り替えられます。
+有効・無効は**ビルド variant** で決まります（`app/configs/{debug,release}.json` の `vconsole` → `BuildConfig.VCONSOLE`）。
+既定はデバッグビルドで有効・リリースビルドで無効です。アプリは URL に `?vconsole=1` / `0` を付けて渡し、
+Web 側はそれを見て切り替えます。ブラウザで手元確認する場合も `?vconsole=1` で出せます。
 
 ## プロジェクト構造
 

@@ -105,7 +105,16 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
   var webViewInstance by remember { mutableStateOf<WebView?>(null) }
   // null 以外のとき、この URL をアプリ内オーバーレイで表示する
   var overlayUrl by remember { mutableStateOf<String?>(null) }
-  val targetUrl = BuildConfig.WEBVIEW_URL
+
+  // vConsole の有効・無効はビルド variant（app/configs/*.json → BuildConfig）で決める。
+  // デバッグは有効・リリースは無効。Web 側は ?vconsole= を見て切り替える。
+  val targetUrl = remember {
+    BuildConfig.WEBVIEW_URL.toUri()
+      .buildUpon()
+      .appendQueryParameter("vconsole", if (BuildConfig.VCONSOLE) "1" else "0")
+      .build()
+      .toString()
+  }
 
   // 配信元のホスト。これ以外の http(s) は端末のブラウザで開く
   val targetHost = remember(targetUrl) { targetUrl.toUri().host }

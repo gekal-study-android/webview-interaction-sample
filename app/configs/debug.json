@@ -1,4 +1,5 @@
 {
   "$schema": "./schema.json",
-  "webview_url": "https://webview-interaction-sample.demo.gekal.cn/index.html?env=debug"
+  "webview_url": "https://webview-interaction-sample.demo.gekal.cn/index.html?env=debug",
+  "vconsole": true
 }

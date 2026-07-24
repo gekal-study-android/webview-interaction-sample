@@ -228,6 +228,21 @@ test.describe('vConsole', () => {
     await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
     expect(await page.locator('.vc-switch').count()).toBe(0);
   });
+
+  test('should stay off when only env=debug is set', async ({ page }) => {
+    // 有効・無効はビルド時フラグ（?vconsole=）だけで決まる。env=debug では自動有効にしない
+    await page.goto(withQuery('env=debug'));
+
+    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
+    expect(await page.locator('.vc-switch').count()).toBe(0);
+  });
+
+  test('should stay off when explicitly disabled', async ({ page }) => {
+    await page.goto(withQuery('vconsole=0'));
+
+    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
+    expect(await page.locator('.vc-switch').count()).toBe(0);
+  });
 });
 
 test.describe('TWA 判定ページ', () => {
