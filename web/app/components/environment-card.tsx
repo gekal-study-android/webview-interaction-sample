@@ -18,6 +18,16 @@ interface WebEnvironment {
   viewport: string;
   pixelRatio: string;
   language: string;
+  vConsole: boolean;
+}
+
+/** vConsole が有効か（vconsole-loader.tsx と同じ判定）。 */
+function isVConsoleEnabled(search: string): boolean {
+  const params = new URLSearchParams(search);
+  const flag = params.get('vconsole');
+  if (flag === '1' || flag === 'true') return true;
+  if (flag === '0' || flag === 'false') return false;
+  return params.get('env') === 'debug';
 }
 
 export function EnvironmentCard() {
@@ -32,12 +42,14 @@ export function EnvironmentCard() {
       viewport: `${window.innerWidth} × ${window.innerHeight}`,
       pixelRatio: String(window.devicePixelRatio),
       language: window.navigator.language,
+      vConsole: isVConsoleEnabled(window.location.search),
     });
   }, []);
 
   const rows: Array<[string, string]> = web
     ? [
         ['env クエリ', web.env],
+        ['vConsole', web.vConsole ? '有効' : '無効（?vconsole=1 で有効）'],
         ['ビューポート', web.viewport],
         ['DPR', web.pixelRatio],
         ['言語', web.language],

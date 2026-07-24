@@ -211,6 +211,25 @@ test.describe('外部リンクの開き方', () => {
   });
 });
 
+test.describe('vConsole', () => {
+  const withQuery = (q: string) => WEBVIEW_URL + (WEBVIEW_URL.includes('?') ? '&' : '?') + q;
+
+  test('should show vConsole when explicitly enabled', async ({ page }) => {
+    await page.goto(withQuery('vconsole=1'));
+
+    // vConsole のフローティングボタンが出る
+    await expect(page.locator('.vc-switch')).toBeVisible();
+  });
+
+  test('should not show vConsole by default', async ({ page }) => {
+    await openDemo(page);
+
+    // 動的読込のため少し待ってから、出ていないことを確認する
+    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
+    expect(await page.locator('.vc-switch').count()).toBe(0);
+  });
+});
+
 test.describe('TWA 判定ページ', () => {
   const twaUrl = () => WEBVIEW_URL.replace(/index\.html.*$/, 'twa.html');
 

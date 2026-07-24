@@ -22,6 +22,12 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 
 ブラウザで直接開いた場合は `AndroidInterface` が存在しないため、ネイティブ呼び出しは実行されずログにのみ記録されます。
 
+### デバッグ (vConsole)
+
+WebView 上でログとネットワーク通信を確認できるよう [vConsole](https://github.com/Tencent/vConsole) を組み込んでいます。
+デバッグビルド（`?env=debug`）で自動的に有効になり、右下のボタンから開けます。
+任意のビルドで `?vconsole=1`（無効化は `?vconsole=0`）でも切り替えられます。
+
 ## プロジェクト構造
 
 - `app/`: Android アプリケーションのソースコード。
