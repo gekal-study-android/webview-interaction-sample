@@ -112,16 +112,20 @@ pnpm test
 2. **エラーハンドリング**: WebView のメインフレームでのエラー（HTTP/SSL）は `MainActivity.kt` の `WebViewClient` で捕捉し、ネイティブのエラー画面を表示する設計を維持してください。
 3. **設定の分離**: URL などの環境依存値は `app/configs/*.json` を通じて `BuildConfig` に反映させる仕組みを利用してください。
 4. **一貫性**: インデントやスタイルは `.editorconfig` および Spotless の設定に従ってください。
-5. **Web の契約維持**: ネイティブは `handleReturnValue` / `onNativeEvent` をグローバル関数として呼び出すため、
+5. **テーマの永続化**: 配色の選択は WebView 側（MUI が `localStorage` に保存）が真実の源。
+   そのため WebView は `settings.domStorageEnabled = true` が必須（既定は無効で、無効だと次回起動で
+   システム設定に戻る）。ネイティブは `ThemePreference`（SharedPreferences）に前回値をミラーし、
+   起動直後のちらつきを防ぐ初期値に使う。
+6. **Web の契約維持**: ネイティブは `handleReturnValue` / `onNativeEvent` をグローバル関数として呼び出すため、
    `bridge-provider.tsx` の `useEffect` で `window` に登録する構成を維持してください。
    また、ネイティブメソッドの追加時は `web/types/android.d.ts` と `KNOWN_METHODS` も更新してください。
-6. **配信 URL**: `app/configs/*.json` の `webview_url` はカスタムドメイン
+7. **配信 URL**: `app/configs/*.json` の `webview_url` はカスタムドメイン
    `webview-interaction-sample.demo.gekal.cn` を指しています。ドメインを変える場合は
    `web/base-path.ts` / `web/public/CNAME` / `assetlinks.json` / `asset_statements` も揃えてください。
-7. **静的エクスポート**: `web/` はサーバー機能（Route Handlers、SSR、`next/image` の最適化など）を
+8. **静的エクスポート**: `web/` はサーバー機能（Route Handlers、SSR、`next/image` の最適化など）を
    使わず、`output: 'export'` でビルドできる状態を保ってください。GitHub Pages のプロジェクトサイト配信のため
    `basePath` の指定も必須です。
-8. **ブラウザでの動作**: `AndroidInterface` が無い環境（ブラウザ・E2E）でも壊れないよう、
+9. **ブラウザでの動作**: `AndroidInterface` が無い環境（ブラウザ・E2E）でも壊れないよう、
    ネイティブ呼び出しは必ず `callNative()` 経由で存在チェックを行ってください。
-9. **ハイドレーション**: ネイティブを呼ぶボタンは `useBridge().hydrated` が true になるまで
+10. **ハイドレーション**: ネイティブを呼ぶボタンは `useBridge().hydrated` が true になるまで
    `disabled` にしてください（ハイドレーション前のクリックが無視されるのを防ぐため）。

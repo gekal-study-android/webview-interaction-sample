@@ -58,27 +58,16 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import cn.gekal.android.myapplicationwebviewinteractionsample.ui.theme.myApplicationWebviewInteractionSampleTheme
 
-/** アプリの配色。既定は [SYSTEM]（端末のダークモード設定に追従）。 */
-enum class AppTheme {
-  SYSTEM,
-  LIGHT,
-  DARK,
-  ;
-
-  companion object {
-    /** WebView から渡される文字列を [AppTheme] に変換する。未知の値は [SYSTEM] にフォールバックする。 */
-    fun from(value: String): AppTheme =
-      entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SYSTEM
-  }
-}
-
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    val themePreference = ThemePreference(this)
     setContent {
-      // 起動時は端末のシステム設定に従い、WebView 側の切り替えで上書きされる
-      var appTheme by remember { mutableStateOf(AppTheme.SYSTEM) }
+      // 前回の選択を初期値にして、WebView が読み込まれるまでのちらつきを防ぐ。
+      // 選択の真実の源は WebView 側（MUI が localStorage に保存）で、
+      // 読み込み後に setAppTheme で上書きされる。
+      var appTheme by remember { mutableStateOf(themePreference.load()) }
       val darkTheme = when (appTheme) {
         AppTheme.SYSTEM -> isSystemInDarkTheme()
         AppTheme.LIGHT -> false
@@ -97,7 +86,12 @@ class MainActivity : ComponentActivity() {
 
       myApplicationWebviewInteractionSampleTheme(darkTheme = darkTheme) {
         Surface(modifier = Modifier.fillMaxSize()) {
-          MainScreen(onAppThemeChanged = { appTheme = it })
+          MainScreen(
+            onAppThemeChanged = {
+              appTheme = it
+              themePreference.save(it)
+            },
+          )
         }
       }
     }
@@ -159,6 +153,9 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
           WebView.setWebContentsDebuggingEnabled(true)
           settings.cacheMode = WebSettings.LOAD_NO_CACHE
           settings.javaScriptEnabled = true
+          // localStorage を有効にする。既定は無効で、有効にしないと MUI がテーマ選択を
+          // 保存できず、次回起動時にシステム設定へ戻ってしまう。
+          settings.domStorageEnabled = true
           // window.open() / target="_blank" を onCreateWindow で受け取れるようにする。
           // 無効（既定）のままだと同じ WebView に読み込まれてしまう。
           settings.setSupportMultipleWindows(true)
