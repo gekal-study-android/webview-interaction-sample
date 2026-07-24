@@ -1,0 +1,88 @@
+name: Android
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/android.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      # v6 はキャッシュ機能のライセンス変更 (Gradle Terms of Use への同意) を伴うため v5 に留める
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      # Google Services プラグインは全バリアントで google-services.json を要求する。
+      # デバッグビルドでは Firebase に接続しないため、シークレットを使わずダミーを置く。
+      # （実際の設定は release ワークフローがシークレットから書き出す）
+      - name: Create a placeholder google-services.json
+        run: |
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "webview-interaction-sample-ci",
+              "storage_bucket": "webview-interaction-sample-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": {
+                    "package_name": "cn.gekal.android.myapplicationwebviewinteractionsample"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  { "current_key": "AIzaSyDUMMYDUMMYDUMMYDUMMYDUMMYDUMMYDUM" }
+                ],
+                "services": {
+                  "appinvite_service": { "other_platform_oauth_client": [] }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Check code style
+        run: ./gradlew spotlessCheck
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 30

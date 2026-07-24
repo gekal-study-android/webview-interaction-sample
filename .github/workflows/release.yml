@@ -23,7 +23,7 @@ jobs:
       # gradle/gradle-build-action は非推奨。後継の gradle/actions/setup-gradle へ移行。
       # v6 はキャッシュ機能のライセンス変更 (Gradle Terms of Use への同意) を伴うため v5 に留める。
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Decode Google Services JSON
         env:
