@@ -7,7 +7,7 @@ import org.junit.Test
 
 /** デモページのリンクが WebView 内 / 外部アプリのどちらに振り分けられるかを検証する。 */
 class LinkPolicyTest {
-  private val targetHost = "gekal-study-android.github.io"
+  private val targetHost = "webview-interaction-sample.demo.gekal.cn"
 
   private fun resolve(scheme: String?, host: String?) = LinkPolicy.resolve(scheme, host, targetHost)
 
@@ -47,6 +47,31 @@ class LinkPolicyTest {
     assertFalse(LinkPolicy.isBrowsableUrl("file"))
     assertFalse(LinkPolicy.isBrowsableUrl("content"))
     assertFalse(LinkPolicy.isBrowsableUrl(null))
+  }
+
+  @Test
+  fun `intent スキームは INTENT_URI のときだけ許可する`() {
+    // intent:// は任意のコンポーネントを起動しうるため、明示的に選んだときだけ通す
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.INTENT_URI, "intent"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.INTENT_URI, "https"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.CUSTOM_TAB, "intent"))
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.CUSTOM_TAB, "https"))
+    assertTrue(LinkPolicy.isAllowedFor(ExternalOpenMode.IN_APP_OVERLAY, "http"))
+    assertFalse(LinkPolicy.isAllowedFor(ExternalOpenMode.PARTIAL_CUSTOM_TAB, "javascript"))
+  }
+
+  @Test
+  fun `開き方の名前を変換し、未知の値は Custom Tabs にする`() {
+    assertEquals(ExternalOpenMode.PARTIAL_CUSTOM_TAB, ExternalOpenMode.from("PARTIAL_CUSTOM_TAB"))
+    assertEquals(ExternalOpenMode.APP_LINK, ExternalOpenMode.from("app_link"))
+    assertEquals(
+      ExternalOpenMode.TRUSTED_WEB_ACTIVITY,
+      ExternalOpenMode.from("Trusted_Web_Activity"),
+    )
+    // WebView から任意の文字列が来ても壊れないこと
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from("nope"))
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from(null))
+    assertEquals(ExternalOpenMode.CUSTOM_TAB, ExternalOpenMode.from(""))
   }
 
   @Test

@@ -2,4 +2,18 @@
     <string name="app_name">Webview Interaction Sample</string>
     <string name="error_network_msg">ネットワークエラーが発生しました</string>
     <string name="retry">再試行</string>
+
+    <!--
+        Trusted Web Activity の対象オリジン。サイト側の /.well-known/assetlinks.json と
+        対になって初めて URL バーが隠れる。JSON なので " をエスケープしている。
+    -->
+    <string name="asset_statements" translatable="false">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {
+                \"namespace\": \"web\",
+                \"site\": \"https://webview-interaction-sample.demo.gekal.cn\"
+            }
+        }]
+    </string>
 </resources>

@@ -14,6 +14,7 @@ import { AppHeader } from './app-header';
 import { DeviceInfoCard } from './device-info-card';
 import { EnvironmentCard } from './environment-card';
 import { EventLogCard } from './event-log-card';
+import { ExternalLinkCard } from './external-link-card';
 import { LinkCard } from './link-card';
 import { NativeCallbackCard } from './native-callback-card';
 import { PageControlCard } from './page-control-card';
@@ -75,6 +76,7 @@ export function DemoApp() {
               <PageControlCard />
               <TextSampleCard />
               <LinkCard />
+              <ExternalLinkCard />
               <EventLogCard />
             </Stack>
             <Typography variant="caption" color="text.disabled" component="p" sx={{ mt: 3, textAlign: 'center' }}>

@@ -50,11 +50,8 @@ const LINKS: LinkSample[] = [
   },
 ];
 
-/** 外部サイトの表示方法を見比べるためのサンプル URL。 */
-const EXTERNAL_URL = 'https://developer.android.com/develop/ui/views/layout/webapps/webview';
-
 export function LinkCard() {
-  const { log, hydrated, callNative } = useBridge();
+  const { log } = useBridge();
 
   return (
     <SectionCard
@@ -102,55 +99,9 @@ export function LinkCard() {
           ))}
         </List>
 
-        <Divider />
-
-        <Stack spacing={1.25}>
-          <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography variant="subtitle2">外部サイトの開き方</Typography>
-            <Chip
-              size="small"
-              variant="outlined"
-              icon={<OpenInNewIcon />}
-              label={new URL(EXTERNAL_URL).host}
-              sx={{ height: 22, fontSize: 11 }}
-            />
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            外部サイトは WebView 内には表示しません。2 つの方式を見比べられます。
-          </Typography>
-
-          <Button
-            variant="contained"
-            startIcon={<LayersIcon />}
-            onClick={() => callNative('openInAppBrowser', [EXTERNAL_URL])}
-            disabled={!hydrated}
-            fullWidth
-          >
-            アプリ内オーバーレイで開く
-          </Button>
-          <Typography variant="caption" color="text.secondary">
-            2 つ目の WebView
-            を現在の画面に重ねます。ブラウザに依存せず見た目が一定で、ヘッダーに接続先ホストと閉じるボタンが出ます。
-          </Typography>
-
-          <Button
-            variant="outlined"
-            startIcon={<OpenInBrowserIcon />}
-            onClick={() => callNative('openInCustomTab', [EXTERNAL_URL])}
-            disabled={!hydrated}
-            fullWidth
-          >
-            Custom Tabs で開く
-          </Button>
-          <Typography variant="caption" color="text.secondary">
-            描画するのはブラウザアプリ本体で、アプリと同じタスクに開きます。OAuth
-            ではこちらが推奨されます。対応ブラウザがない端末では通常のブラウザ起動になります。
-          </Typography>
-        </Stack>
-
         <Typography variant="caption" color="text.secondary">
-          電話（<code>tel:</code>）は「表示サンプル」にあります。ネイティブは <code>shouldOverrideUrlLoading</code>{' '}
-          でこれらを受け取り、対応するアプリへ渡します。
+          電話（<code>tel:</code>）は「表示サンプル」、外部サイトは「外部リンクの開き方」にあります。ネイティブは{' '}
+          <code>shouldOverrideUrlLoading</code> でこれらを受け取り、対応するアプリへ渡します。
         </Typography>
       </Stack>
     </SectionCard>

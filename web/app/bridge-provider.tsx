@@ -59,8 +59,7 @@ const KNOWN_METHODS: BridgeMethod[] = [
   'setAppTheme',
   'reloadPage',
   'simulateLoadError',
-  'openInAppBrowser',
-  'openInCustomTab',
+  'openExternalLink',
 ];
 
 const timestamp = () =>
@@ -70,6 +69,27 @@ const timestamp = () =>
 
 const formatArgs = (args: unknown[]) =>
   args.map((arg) => (typeof arg === 'string' ? `'${arg}'` : String(arg))).join(', ');
+
+/** コンソール出力での方向の見出し。 */
+const DIRECTION_LABEL: Record<LogDirection, string> = {
+  'js-to-native': 'JS → Native',
+  'native-to-js': 'Native → JS',
+  info: 'Bridge',
+};
+
+/**
+ * ブリッジのやり取りを WebView のコンソールにも出す。
+ * vConsole など端末上のコンソールで JS ⇄ Native の入出力を追えるようにするため。
+ */
+function emitConsole(entry: Omit<LogEntry, 'id' | 'at'>) {
+  const tag = `[Bridge] ${DIRECTION_LABEL[entry.direction]}: ${entry.label}`;
+  const method = entry.level === 'error' ? console.error : entry.level === 'warning' ? console.warn : console.log;
+  if (entry.detail !== undefined) {
+    method(tag, entry.detail);
+  } else {
+    method(tag);
+  }
+}
 
 export function BridgeProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
@@ -84,6 +104,8 @@ export function BridgeProvider({ children }: { children: ReactNode }) {
 
   const log = useCallback((entry: Omit<LogEntry, 'id' | 'at'>) => {
     setLogs((current) => [{ ...entry, id: (logId.current += 1), at: timestamp() }, ...current].slice(0, 100));
+    // 画面のイベントログに加えて、WebView のコンソール（vConsole）にも出す
+    emitConsole(entry);
   }, []);
 
   const notify = useCallback((message: string, level: LogLevel = 'info') => setNotice({ message, level }), []);
