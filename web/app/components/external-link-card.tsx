@@ -96,7 +96,7 @@ const MODES: OpenMode[] = [
 ];
 
 export function ExternalLinkCard() {
-  const { hydrated, callNative, log, notify } = useBridge();
+  const { hydrated, connected, callNative, log, notify } = useBridge();
 
   // window.open() は shouldOverrideUrlLoading を通らず、onCreateWindow で受け取る
   const openPopup = () => {
@@ -106,9 +106,15 @@ export function ExternalLinkCard() {
       label: `window.open('${EXTERNAL_URL}')`,
       detail: 'ネイティブは WebChromeClient.onCreateWindow で受け取る',
     });
-    const opened = window.open(EXTERNAL_URL, '_blank', 'noopener');
-    if (!opened) {
-      notify('ポップアップがブロックされました', 'warning');
+
+    // 'noopener' を付けると成功しても戻り値が必ず null になり、ブロックと区別できない。
+    // ここは固定の信頼済み URL なので付けず、戻り値でブロックを判定できるようにする。
+    const popup = window.open(EXTERNAL_URL, '_blank');
+
+    // ブラウザで直接開いた場合のみ、ポップアップブロックを知らせる。
+    // WebView ではネイティブが onCreateWindow で処理し、戻り値では成否を判断できないため対象外。
+    if (!connected && popup === null) {
+      notify('ブラウザにポップアップをブロックされました', 'warning');
     }
   };
 

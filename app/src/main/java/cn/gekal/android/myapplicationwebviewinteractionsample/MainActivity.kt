@@ -159,6 +159,8 @@ fun MainScreen(onAppThemeChanged: (AppTheme) -> Unit) {
           // window.open() / target="_blank" を onCreateWindow で受け取れるようにする。
           // 無効（既定）のままだと同じ WebView に読み込まれてしまう。
           settings.setSupportMultipleWindows(true)
+          // ユーザー操作を起点としない window.open() も onCreateWindow に届くようにする
+          settings.javaScriptCanOpenWindowsAutomatically = true
           // 読み込み完了までの白い一瞬を防ぐ
           setBackgroundColor(backgroundColor)
 
