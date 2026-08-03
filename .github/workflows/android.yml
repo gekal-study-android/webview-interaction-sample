@@ -29,13 +29,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.6.0
         with:
           java-version: '17'
           distribution: 'temurin'
       # v6 はキャッシュ機能のライセンス変更 (Gradle Terms of Use への同意) を伴うため v5 に留める
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       # Google Services プラグインは全バリアントで google-services.json を要求する。
       # デバッグビルドでは Firebase に接続しないため、シークレットを使わずダミーを置く。
