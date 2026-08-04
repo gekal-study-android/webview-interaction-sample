@@ -90,7 +90,7 @@ gh variable list --repo gekal-study-android/webview-interaction-sample --env app
 
 WebView が読み込むコンテンツは Next.js の静的エクスポート (`output: 'export'`) で生成し、GitHub Actions から GitHub Pages へデプロイしています。
 
-- URL: <https://webview-interaction-sample.demo.gekal.cn/index.html>（カスタムドメイン。ルート配信）
+- URL: <https://webview-interaction-sample.android.demo.gekal.cn/index.html>（カスタムドメイン。ルート配信）
 - ソース: `web/`（App Router + TypeScript + MUI）
 - デプロイ: `.github/workflows/pages.yml`（`main` への push で自動デプロイ / PR ではビルド検証のみ）
 

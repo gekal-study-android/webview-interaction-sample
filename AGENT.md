@@ -121,7 +121,7 @@ pnpm test
    `bridge-provider.tsx` の `useEffect` で `window` に登録する構成を維持してください。
    また、ネイティブメソッドの追加時は `web/types/android.d.ts` と `KNOWN_METHODS` も更新してください。
 7. **配信 URL**: `app/configs/*.json` の `webview_url` はカスタムドメイン
-   `webview-interaction-sample.demo.gekal.cn` を指しています。ドメインを変える場合は
+   `webview-interaction-sample.android.demo.gekal.cn` を指しています。ドメインを変える場合は
    `web/base-path.ts` / `web/public/CNAME` / `assetlinks.json` / `asset_statements` も揃えてください。
 8. **静的エクスポート**: `web/` はサーバー機能（Route Handlers、SSR、`next/image` の最適化など）を
    使わず、`output: 'export'` でビルドできる状態を保ってください。GitHub Pages のプロジェクトサイト配信のため
