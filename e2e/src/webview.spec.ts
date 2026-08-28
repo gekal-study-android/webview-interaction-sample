@@ -233,34 +233,54 @@ test.describe('外部リンクの開き方', () => {
 test.describe('vConsole', () => {
   const withQuery = (q: string) => WEBVIEW_URL + (WEBVIEW_URL.includes('?') ? '&' : '?') + q;
 
+  const openAndSettle = async (page: Page, url: string) => {
+    await page.goto(url);
+    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
+    // vConsole は動的 import で遅れて現れる。ハイドレーション直後に数えると、
+    // キャッシュの有無で結果が変わってしまうため、読み込みが落ち着くまで待つ。
+    await page.waitForLoadState('networkidle');
+  };
+
+  /** 実行環境カードが示している vConsole の状態（ビルド時フラグとクエリの合成結果）。 */
+  const shownAsEnabled = async (page: Page) => {
+    // フローティングボタン自体にも "vConsole" の文字があるため、カード内に絞って読む
+    const card = page.locator('.MuiPaper-root').filter({ hasText: '実行環境' }).first();
+    const row = card.getByText('vConsole', { exact: true }).locator('xpath=..');
+    return (await row.innerText()).includes('有効');
+  };
+
   test('should show vConsole when explicitly enabled', async ({ page }) => {
-    await page.goto(withQuery('vconsole=1'));
+    await openAndSettle(page, withQuery('vconsole=1'));
 
     // vConsole のフローティングボタンが出る
     await expect(page.locator('.vc-switch')).toBeVisible();
+    expect(await shownAsEnabled(page)).toBe(true);
   });
 
-  test('should not show vConsole by default', async ({ page }) => {
-    await openDemo(page);
+  test('should hide vConsole when explicitly disabled', async ({ page }) => {
+    await openAndSettle(page, withQuery('vconsole=0'));
 
-    // 動的読込のため少し待ってから、出ていないことを確認する
-    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
-    expect(await page.locator('.vc-switch').count()).toBe(0);
+    await expect(page.locator('.vc-switch')).toHaveCount(0);
+    expect(await shownAsEnabled(page)).toBe(false);
   });
 
-  test('should stay off when only env=debug is set', async ({ page }) => {
-    // 有効・無効はビルド時フラグ（?vconsole=）だけで決まる。env=debug では自動有効にしない
-    await page.goto(withQuery('env=debug'));
+  test('should follow the build flag when no query is given', async ({ page }) => {
+    // 既定の有効・無効はビルド時フラグ NEXT_PUBLIC_VCONSOLE で決まり、配信ごとに変わる。
+    // どちらであっても、実行環境カードの表示と実際の読み込みが食い違わないことを見る。
+    await openAndSettle(page, WEBVIEW_URL);
 
-    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
-    expect(await page.locator('.vc-switch').count()).toBe(0);
+    const enabled = await shownAsEnabled(page);
+    await expect(page.locator('.vc-switch')).toHaveCount(enabled ? 1 : 0);
   });
 
-  test('should stay off when explicitly disabled', async ({ page }) => {
-    await page.goto(withQuery('vconsole=0'));
+  test('should not be changed by the env query', async ({ page }) => {
+    // env=debug は表示上の環境名でしかなく、vConsole の有無には影響しない
+    await openAndSettle(page, WEBVIEW_URL);
+    const byDefault = await shownAsEnabled(page);
 
-    await expect(page.getByRole('button', { name: 'Show Toast' })).toBeEnabled();
-    expect(await page.locator('.vc-switch').count()).toBe(0);
+    await openAndSettle(page, withQuery('env=debug'));
+    expect(await shownAsEnabled(page)).toBe(byDefault);
+    await expect(page.locator('.vc-switch')).toHaveCount(byDefault ? 1 : 0);
   });
 });
 
