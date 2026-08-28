@@ -35,7 +35,7 @@ jobs:
           distribution: 'temurin'
       # v6 はキャッシュ機能のライセンス変更 (Gradle Terms of Use への同意) を伴うため v5 に留める
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       # Google Services プラグインは全バリアントで google-services.json を要求する。
       # デバッグビルドでは Firebase に接続しないため、シークレットを使わずダミーを置く。
