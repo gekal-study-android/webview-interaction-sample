@@ -6,7 +6,7 @@ Android の WebView と JavaScript 間の相互作用をデモンストレーシ
 
 - **JavaScript Interface**: Android と WebView 内の JavaScript 間で相互にメソッドを呼び出す方法。
 - **エラーハンドリング**: WebView での HTTP エラー (404, 500) や SSL エラー時のネイティブエラー画面表示。
-- **E2E テスト**: Playwright を使用した WebView の自動テスト（`e2e` ディレクトリ）。
+- **E2E テスト**: ブラウザ上での Playwright（`e2e` ディレクトリ）と、実機でアプリごと動かす計装テスト（`app/src/androidTest`）。
 - **デモ画面**: Next.js + MUI で構築した、ブリッジの動作を一覧できるデモ UI（`web` ディレクトリ）。
 
 ### デモ機能
@@ -39,7 +39,9 @@ GitHub Actions では、リポジトリ変数 `NEXT_PUBLIC_VCONSOLE` を `true` 
 
 - `app/`: Android アプリケーションのソースコード。
 - `web/`: GitHub Pages で公開する Web コンテンツ（Next.js 静的エクスポート + MUI）。
-- `e2e/`: Playwright を使用したエンドツーエンドテスト。
+- `e2e/`: Playwright を使用したエンドツーエンドテスト（ブラウザ上でブリッジをモック）。
+- `app/src/androidTest/`: 実機でアプリを起動して行うエンドツーエンドテスト。
+- `scripts/`: 開発用スクリプト（テスト実行など）。
 
 ## ローカル開発の準備
 
@@ -125,13 +127,39 @@ pnpm build  # web/out/ に出力される
 
 ## E2E テストの実行
 
-`e2e` ディレクトリに移動してテストを実行します。
+同じデモページに対して、2 段構えでテストしています。
+
+| | 対象 | 実行環境 | 分かること |
+| --- | --- | --- | --- |
+| Playwright (`e2e/`) | Web のロジック | ブラウザ（CI で自動実行） | 画面の表示・ネイティブに渡す引数。`AndroidInterface` はモック |
+| 計装テスト (`app/src/androidTest/`) | ブリッジの往復 | 実機（手動実行） | 本物の `JavaScriptInterface` の戻り値、ネイティブ画面、設定の保存 |
+
+### ブラウザ (Playwright)
 
 ```shell
 cd e2e
 pnpm install
 pnpm test
 ```
+
+### 実機 (計装テスト)
+
+接続中の実機でアプリを起動し、配信中のデモページを読み込んで検証します。
+端末側にネットワーク接続が必要です（`BuildConfig.WEBVIEW_URL` を読み込むため）。
+
+```shell
+scripts/test.sh e2e                 # 実機での E2E のみ
+scripts/test.sh all                 # JVM ユニットテスト + 実機での E2E
+scripts/test.sh e2e --class cn.gekal.android.myapplicationwebviewinteractionsample.WebViewBridgeE2eTest
+```
+
+レポートは `app/build/reports/androidTests/connected/debug/index.html` に出力されます。
+実機が要るため GitHub Actions では実行していません（CI はユニットテストと Playwright まで）。
+
+| テスト | 内容 |
+| --- | --- |
+| `WebViewBridgeE2eTest` | ブリッジの注入、`showToast()` の往復、実機の端末情報、非同期コールバック、配色のネイティブ保存、`reloadPage()` |
+| `NativeScreenE2eTest` | `simulateLoadError()` のエラー画面と再試行、アプリ内オーバーレイの表示と戻る操作 |
 
 ## 署名 (リリースビルド用)
 

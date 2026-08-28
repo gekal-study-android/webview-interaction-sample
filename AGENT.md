@@ -11,7 +11,7 @@ Android の `WebView` と JavaScript 間の相互作用をデモンストレー�
 - **Web Content**: Next.js (App Router / TypeScript) + MUI の静的エクスポート (GitHub Pages でホスト)
 - **CI/CD**: GitHub Actions, Firebase App Distribution
 - **依存関係管理**: Dependabot (`.github/dependabot.yml`) — GitHub Actions / npm (web, e2e) / Gradle を週次で更新
-- **Testing**: Playwright (E2E)
+- **Testing**: JVM ユニットテスト / Playwright (ブラウザ E2E) / 計装テスト (実機 E2E)
 
 ## 重要ファイル
 - `app/src/main/java/cn/gekal/android/myapplicationwebviewinteractionsample/MainActivity.kt`: WebView のセットアップとエラーハンドリング
@@ -26,6 +26,10 @@ Android の `WebView` と JavaScript 間の相互作用をデモンストレー�
 - `web/types/android.d.ts`: `AndroidInterface` / `handleReturnValue` / `onNativeEvent` の型定義
 - `app/build.gradle.kts`: ビルド設定、BuildConfig 定義
 - `app/configs/{debug|release}.json`: 各環境の WebView URL 設定
+- `app/src/androidTest/.../WebViewDriver.kt`: 実機 E2E から WebView を操作するドライバ（`evaluateJavascript` で DOM を叩く）
+- `app/src/androidTest/.../WebViewBridgeE2eTest.kt`: 実機でのブリッジ往復の E2E
+- `app/src/androidTest/.../NativeScreenE2eTest.kt`: WebView の依頼で出るネイティブ画面（エラー画面・アプリ内オーバーレイ）の E2E
+- `scripts/test.sh`: テスト実行（`unit` / `e2e` / `all`）
 
 ## WebView 相互作用の仕様
 - **JavaScript Interface 名**: `AndroidInterface`
@@ -101,11 +105,18 @@ pnpm dev    # 開発サーバー (http://localhost:3000)
 pnpm build  # 静的エクスポート -> web/out/
 ```
 
-### E2E テスト実行 (Playwright)
+### E2E テスト実行 (Playwright / ブラウザ)
 ```bash
 cd e2e
 pnpm install
 pnpm test
+```
+
+### E2E テスト実行 (計装テスト / 実機)
+実機を接続して実行する。配信中のデモページを読み込むため、端末側にネットワークが必要。
+```bash
+scripts/test.sh e2e    # 実機での E2E のみ
+scripts/test.sh all    # JVM ユニットテスト + 実機での E2E
 ```
 
 ## エージェントへの指示事項
@@ -130,3 +141,8 @@ pnpm test
    ネイティブ呼び出しは必ず `callNative()` 経由で存在チェックを行ってください。
 10. **ハイドレーション**: ネイティブを呼ぶボタンは `useBridge().hydrated` が true になるまで
    `disabled` にしてください（ハイドレーション前のクリックが無視されるのを防ぐため）。
+11. **テストの二段構え**: Web 側のロジックは Playwright（ブラウザ・`AndroidInterface` はモック）、
+   ネイティブとの往復は計装テスト（実機・本物のブリッジ）で見ています。ネイティブメソッドや
+   デモ画面のボタンを増やしたら、どちらに足すべきかを決めて追加してください。
+   計装テストは配信中のページに依存するため、`web/` のラベル（ボタン名・表示文言）を変えたら
+   `app/src/androidTest/` の期待値も合わせて更新します。

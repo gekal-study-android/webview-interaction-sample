@@ -84,6 +84,11 @@ android {
     compose = true
     buildConfig = true
   }
+
+  testOptions {
+    // 端末のアニメーション設定で実機 E2E の待ち合わせが揺れないよう止める
+    animationsDisabled = true
+  }
 }
 
 kotlin {
