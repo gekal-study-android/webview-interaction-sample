@@ -28,7 +28,8 @@ Android の `WebView` と JavaScript 間の相互作用をデモンストレー�
 - `app/configs/{debug|release}.json`: 各環境の WebView URL 設定
 - `app/src/androidTest/.../WebViewDriver.kt`: 実機 E2E から WebView を操作するドライバ（`evaluateJavascript` で DOM を叩く）
 - `app/src/androidTest/.../WebViewBridgeE2eTest.kt`: 実機でのブリッジ往復の E2E
-- `app/src/androidTest/.../NativeScreenE2eTest.kt`: WebView の依頼で出るネイティブ画面（エラー画面・アプリ内オーバーレイ）の E2E
+- `app/src/androidTest/.../NativeErrorScreenE2eTest.kt`: ネイティブのエラー画面の E2E（Compose のテスト API を使う）
+- `app/src/androidTest/.../InAppOverlayE2eTest.kt`: アプリ内オーバーレイの E2E（Compose のテストルールを入れると合成が進まないため使わない）
 - `scripts/test.sh`: テスト実行（`unit` / `e2e` / `all`）
 
 ## WebView 相互作用の仕様

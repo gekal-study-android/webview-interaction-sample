@@ -28,7 +28,17 @@ class WebViewDriver private constructor(private val webView: WebView) {
    * `evaluateJavascript` のコールバックはメインスレッドで呼ばれるため、テストスレッドからは
    * ラッチで待ち受ける。
    */
-  fun eval(script: String): String {
+  fun eval(script: String): String = checkNotNull(evalOrNull(script)) {
+    "JS の評価がタイムアウトしました: $script"
+  }
+
+  /**
+   * [eval] と同じだが、結果が返らなければ null。
+   *
+   * 読み込み中のページに評価を依頼すると、JS の実行コンテキストごと差し替わって
+   * コールバックが呼ばれないことがある。待ち合わせの途中ではそれを失敗にしたくない。
+   */
+  private fun evalOrNull(script: String): String? {
     val latch = CountDownLatch(1)
     var raw = NULL_LITERAL
     instrumentation.runOnMainSync {
@@ -37,9 +47,7 @@ class WebViewDriver private constructor(private val webView: WebView) {
         latch.countDown()
       }
     }
-    check(latch.await(EVAL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
-      "JS の評価がタイムアウトしました: $script"
-    }
+    if (!latch.await(EVAL_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) return null
     // 戻り値は JSON リテラル（文字列なら引用符付き）で返るため、配列に包んで取り出す
     return if (raw == NULL_LITERAL) "" else JSONArray("[$raw]").optString(0, "")
   }
@@ -51,14 +59,15 @@ class WebViewDriver private constructor(private val webView: WebView) {
     timeoutMillis: Long = AWAIT_TIMEOUT_MILLIS,
   ) {
     val deadline = SystemClock.uptimeMillis() + timeoutMillis
-    var last: String
+    var last: String?
     do {
-      last = eval(guarded(expression))
+      last = evalOrNull(guarded(expression))
       if (last == "true") return
       SystemClock.sleep(POLL_INTERVAL_MILLIS)
     } while (SystemClock.uptimeMillis() < deadline)
     throw AssertionError(
-      "$description が ${timeoutMillis}ms 以内に成立しませんでした（最後の評価: 「$last」）",
+      "$description が ${timeoutMillis}ms 以内に成立しませんでした" +
+        "（最後の評価: ${last?.let { "「$it」" } ?: "応答なし"}）",
     )
   }
 
@@ -112,7 +121,7 @@ class WebViewDriver private constructor(private val webView: WebView) {
     /** 実機の通信は遅いことがあるため、ページの読み込みだけ長めに待つ。 */
     private const val LOAD_TIMEOUT_MILLIS = 60_000L
     private const val AWAIT_TIMEOUT_MILLIS = 15_000L
-    private const val EVAL_TIMEOUT_MILLIS = 10_000L
+    private const val EVAL_TIMEOUT_MILLIS = 5_000L
     private const val VIEW_TIMEOUT_MILLIS = 10_000L
     private const val POLL_INTERVAL_MILLIS = 250L
     private const val NULL_LITERAL = "null"

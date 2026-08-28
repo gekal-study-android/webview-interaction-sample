@@ -159,7 +159,8 @@ scripts/test.sh e2e --class cn.gekal.android.myapplicationwebviewinteractionsamp
 | テスト | 内容 |
 | --- | --- |
 | `WebViewBridgeE2eTest` | ブリッジの注入、`showToast()` の往復、実機の端末情報、非同期コールバック、配色のネイティブ保存、`reloadPage()` |
-| `NativeScreenE2eTest` | `simulateLoadError()` のエラー画面と再試行、アプリ内オーバーレイの表示と戻る操作 |
+| `NativeErrorScreenE2eTest` | `simulateLoadError()` のエラー画面の表示と、再試行での復帰 |
+| `InAppOverlayE2eTest` | アプリ内オーバーレイの表示と、戻る操作で閉じてデモ画面に復帰すること |
 
 ## 署名 (リリースビルド用)
 
