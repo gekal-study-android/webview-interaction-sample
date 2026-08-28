@@ -58,15 +58,51 @@ firebase login
 ```
 
 #### 2. google-services.json の取得
-Firebase CLI の `apps:sdkconfig` コマンドを使用して、Android アプリの設定を取得します。
 
-```shell
-# プロジェクト ID を指定して設定を表示
-# アプリケーション ID: cn.gekal.android.myapplicationwebviewinteractionsample
-firebase apps:sdkconfig ANDROID --project webview-interaction-sample > app/google-services.json
+`app/google-services.json` は `.gitignore` 済みで、リポジトリには入っていません。
+無い状態でビルドすると次のエラーで失敗します。
+
+```
+File google-services.json is missing. The Google Services Plugin cannot function without it.
 ```
 
-※ `<YOUR_PROJECT_ID>` は Firebase コンソールで確認できるプロジェクト ID に置き換えてください。出力された内容が JSON 形式でない場合は、手動で整形するか Firebase コンソールから直接ダウンロードしてください。
+Firebase CLI の `apps:sdkconfig` で取り直します。`-o` を付けると余計なログが混ざらず、
+そのままファイルに書き出せます（`>` でのリダイレクトは進捗ログが混ざることがあります）。
+
+```shell
+firebase login
+
+# Android アプリの App ID を確認する
+firebase apps:list ANDROID --project webview-interaction-sample
+
+# 設定を取得して配置する（App ID は上のコマンドの出力に合わせる）
+firebase apps:sdkconfig ANDROID 1:533859828379:android:394d68aacbb28c553a3c3e \
+  --project webview-interaction-sample \
+  -o app/google-services.json
+```
+
+取得できたら、`applicationId` と一致しているかだけ確認してからビルドします。
+
+```shell
+# package_name が cn.gekal.android.myapplicationwebviewinteractionsample であること
+python3 -c "import json;print(json.load(open('app/google-services.json'))['client'][0]['client_info']['android_client_info']['package_name'])"
+
+./gradlew :app:assembleDebug
+```
+
+| 項目 | 値 |
+| --- | --- |
+| プロジェクト ID | `webview-interaction-sample` |
+| プロジェクト番号 | `533859828379` |
+| Android App ID | `1:533859828379:android:394d68aacbb28c553a3c3e` |
+| applicationId | `cn.gekal.android.myapplicationwebviewinteractionsample` |
+
+CLI が使えない場合は、Firebase コンソール（プロジェクトの設定 → マイアプリ）から
+`google-services.json` をダウンロードして `app/` に置いても同じです。
+
+なお GitHub Actions ではこのファイルを取得せず、`.github/workflows/android.yml` が
+ダミーの `google-services.json` を生成しています（デバッグビルドは Firebase に接続しないため）。
+リリースワークフローだけがシークレットから実物を書き出します。
 
 #### 3. google-credentials.json (Firebase App Distribution 用)
 このファイルは Google Cloud のサービスアカウントキーです。セキュリティ上の理由から CLI で直接「取得」はできませんが、新しく作成することは可能です。

@@ -26,6 +26,7 @@ Android の `WebView` と JavaScript 間の相互作用をデモンストレー�
 - `web/types/android.d.ts`: `AndroidInterface` / `handleReturnValue` / `onNativeEvent` の型定義
 - `app/build.gradle.kts`: ビルド設定、BuildConfig 定義
 - `app/configs/{debug|release}.json`: 各環境の WebView URL 設定
+- `app/google-services.json`: Firebase の設定。`.gitignore` 済みでリポジトリには無く、欠けると `File google-services.json is missing.` でビルドが落ちる。取り直し手順は README「google-services.json の取得」
 - `app/src/androidTest/.../WebViewDriver.kt`: 実機 E2E から WebView を操作するドライバ（`evaluateJavascript` で DOM を叩く）
 - `app/src/androidTest/.../WebViewBridgeE2eTest.kt`: 実機でのブリッジ往復の E2E
 - `app/src/androidTest/.../NativeErrorScreenE2eTest.kt`: ネイティブのエラー画面の E2E（Compose のテスト API を使う）
