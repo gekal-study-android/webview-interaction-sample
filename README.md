@@ -208,6 +208,26 @@ app/build/reports/e2e/index.html
 scripts/e2e-report.py            # 直近の実行結果から再生成
 ```
 
+### ページ全体のキャプチャ
+
+テストが撮るのは画面に見えている範囲だけです。縦に長いデモページ全体を 1 枚にしたいときは、
+実機の WebView を DevTools（CDP）につないでスクロールしながら撮り、連結します。
+
+```shell
+scripts/webview-fullpage.sh                    # 既定の出力先に保存
+scripts/webview-fullpage.sh --run              # アプリを起動してから撮る
+scripts/webview-fullpage.sh --out /tmp/x.png   # 出力先を指定
+```
+
+出力例: `1080x11924`（画面 約 6 枚分）→ `app/build/reports/e2e/webview-fullpage.png`
+
+- 端末のロックを解除し、アプリを前面に出しておくこと。画面に出ていない WebView は描画されず、
+  撮影要求が返ってきません（スクリプトが事前に検出して止めます）。
+- 連結に Pillow を使います（`python3 -m pip install --user pillow`）。
+- `Page.captureScreenshot` の `captureBeyondViewport` や `Emulation` で画面を伸ばす方法は
+  Android WebView では使えません（応答が返らない / 同じ画面が繰り返し写る）。詳細は
+  `scripts/webview-fullpage.py` の冒頭に書いてあります。
+
 元データの出力先:
 
 | 種類 | パス |
