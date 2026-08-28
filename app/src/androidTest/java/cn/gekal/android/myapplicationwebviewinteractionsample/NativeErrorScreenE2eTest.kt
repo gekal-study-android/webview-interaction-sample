@@ -34,11 +34,19 @@ class NativeErrorScreenE2eTest {
   @get:Rule(order = 1)
   val activityRule = ActivityScenarioRule(MainActivity::class.java)
 
+  // Activity より内側に置く。失敗時のキャプチャを Activity が閉じる前に撮るため
+  @get:Rule(order = 2)
+  val screenshots = ScreenshotRule()
+
   private lateinit var web: WebViewDriver
 
   @Before
   fun setUp() {
     web = WebViewDriver.awaitDemoPage(activityRule.scenario)
+    // Compose のテストルールがフレームクロックを握っているため、こちらから促さないと
+    // 読み込み中表示を消す再コンポーズが走らない（そのまま撮るとスピナーが写る）
+    composeRule.waitForIdle()
+    screenshots.capture("demo-loaded")
   }
 
   @Test
@@ -50,12 +58,15 @@ class NativeErrorScreenE2eTest {
       webView.visibility == View.GONE && webView.url == LoadStateReducer.BLANK_URL
     }
     composeRule.onNodeWithText("ページを読み込めませんでした").assertIsDisplayed()
+    screenshots.capture("error-screen")
 
     composeRule.onNodeWithText("再試行").performClick()
 
     // 再試行で配信 URL を読み直し、デモページに戻れること
     web.awaitState("WebView の再表示", LOAD_TIMEOUT_MILLIS) { it.visibility == View.VISIBLE }
     web.awaitBodyText("接続済み", LOAD_TIMEOUT_MILLIS)
+    composeRule.waitForIdle()
+    screenshots.capture("recovered")
   }
 
   private companion object {

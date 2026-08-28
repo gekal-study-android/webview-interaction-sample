@@ -98,6 +98,21 @@ if [[ "$SCOPE" == "e2e" || "$SCOPE" == "all" ]]; then
     echo "⚠️ 端末が機内モードの可能性があります。E2E は配信中のページを読み込みます。" >&2
   fi
 
+  # ── 実行中だけ画面を点けておく ──────────────────────────────────────────
+  # 途中で画面が消えるとロック画面が写り込み、画面キャプチャが当てにならなくなる。
+  # 元の設定は終了時に必ず戻す。
+  STAY_ON_BEFORE="$("$ADB" -s "$SERIAL" shell settings get global stay_on_while_plugged_in | tr -d '\r')"
+  restore_stay_on() {
+    if [[ "$STAY_ON_BEFORE" =~ ^[0-9]+$ ]]; then
+      "$ADB" -s "$SERIAL" shell settings put global stay_on_while_plugged_in "$STAY_ON_BEFORE" || true
+      echo "▶ 画面の点灯設定を戻しました: $STAY_ON_BEFORE"
+    fi
+  }
+  trap restore_stay_on EXIT
+  "$ADB" -s "$SERIAL" shell svc power stayon true
+  "$ADB" -s "$SERIAL" shell input keyevent KEYCODE_WAKEUP
+  "$ADB" -s "$SERIAL" shell wm dismiss-keyguard || true
+
   export ANDROID_SERIAL="$SERIAL"
   TASKS+=(connectedDebugAndroidTest)
 fi

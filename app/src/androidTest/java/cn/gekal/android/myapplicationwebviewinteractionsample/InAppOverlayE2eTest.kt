@@ -2,6 +2,8 @@ package cn.gekal.android.myapplicationwebviewinteractionsample
 
 import android.os.SystemClock
 import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Before
@@ -24,14 +26,19 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class InAppOverlayE2eTest {
-  @get:Rule
+  @get:Rule(order = 0)
   val activityRule = ActivityScenarioRule(MainActivity::class.java)
+
+  // Activity より内側に置く。失敗時のキャプチャを Activity が閉じる前に撮るため
+  @get:Rule(order = 1)
+  val screenshots = ScreenshotRule()
 
   private lateinit var web: WebViewDriver
 
   @Before
   fun setUp() {
     web = WebViewDriver.awaitDemoPage(activityRule.scenario)
+    screenshots.capture("demo-loaded")
   }
 
   @Test
@@ -45,6 +52,11 @@ class InAppOverlayE2eTest {
     // オーバーレイの BackHandler が登録されるのを待つ。登録前に戻ると Activity ごと終了する
     awaitActivity("戻る操作の受け取り") { it.onBackPressedDispatcher.hasEnabledCallbacks() }
 
+    // 外部サイトが描画されてから撮る。ただし外部サイトの遅さでテストを落としたくないので、
+    // 時間切れになってもそのまま進む（オーバーレイが出ていること自体は上で確認済み）。
+    awaitOverlayContent()
+    screenshots.capture("overlay-shown")
+
     // 端末の戻る操作で閉じられること。閉じられないとデモ画面に戻れなくなる
     activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
     web.awaitState("アプリ内オーバーレイを閉じたあとの再表示") { it.visibility == View.VISIBLE }
@@ -52,6 +64,30 @@ class InAppOverlayE2eTest {
     // 下に隠れていたデモページが、そのまま操作できる状態で戻ってくること
     web.clickButton("Show Toast")
     web.awaitBodyText("handleReturnValue('Hello from Android!')")
+    screenshots.capture("overlay-closed")
+  }
+
+  /** オーバーレイの WebView が外部サイトを読み終えるのを待つ。落とさず、待てたかだけ返す。 */
+  private fun awaitOverlayContent(): Boolean {
+    val deadline = SystemClock.uptimeMillis() + OVERLAY_LOAD_TIMEOUT_MILLIS
+    do {
+      var loaded = false
+      activityRule.scenario.onActivity { activity ->
+        loaded = webViews(activity.window.decorView).any {
+          it.url?.contains(EXTERNAL_HOST) == true && it.progress == 100
+        }
+      }
+      if (loaded) return true
+      SystemClock.sleep(POLL_INTERVAL_MILLIS)
+    } while (SystemClock.uptimeMillis() < deadline)
+    return false
+  }
+
+  /** ビュー階層にある WebView をすべて集める。2 つ目がオーバーレイのもの。 */
+  private fun webViews(view: View): List<WebView> = when (view) {
+    is WebView -> listOf(view)
+    is ViewGroup -> (0 until view.childCount).flatMap { webViews(view.getChildAt(it)) }
+    else -> emptyList()
   }
 
   /** Activity の状態が条件を満たすまで待つ。 */
@@ -67,7 +103,9 @@ class InAppOverlayE2eTest {
   }
 
   private companion object {
+    const val EXTERNAL_HOST = "developer.android.com"
     const val ACTIVITY_TIMEOUT_MILLIS = 15_000L
+    const val OVERLAY_LOAD_TIMEOUT_MILLIS = 20_000L
     const val POLL_INTERVAL_MILLIS = 100L
   }
 }

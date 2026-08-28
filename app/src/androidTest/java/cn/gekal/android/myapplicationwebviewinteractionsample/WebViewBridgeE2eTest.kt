@@ -23,8 +23,12 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class WebViewBridgeE2eTest {
-  @get:Rule
+  @get:Rule(order = 0)
   val activityRule = ActivityScenarioRule(MainActivity::class.java)
+
+  // Activity より内側に置く。失敗時のキャプチャを Activity が閉じる前に撮るため
+  @get:Rule(order = 1)
+  val screenshots = ScreenshotRule()
 
   private val context = InstrumentationRegistry.getInstrumentation().targetContext
   private lateinit var web: WebViewDriver
@@ -32,6 +36,7 @@ class WebViewBridgeE2eTest {
   @Before
   fun setUp() {
     web = WebViewDriver.awaitDemoPage(activityRule.scenario)
+    screenshots.capture("demo-loaded")
   }
 
   @Test
@@ -42,6 +47,7 @@ class WebViewBridgeE2eTest {
     web.awaitTrue("onNativeEvent の登録", "typeof window.onNativeEvent === 'function'")
 
     assertEquals(BuildConfig.WEBVIEW_URL, web.eval("location.href"))
+    screenshots.capture("bridge-connected")
   }
 
   @Test
@@ -55,6 +61,7 @@ class WebViewBridgeE2eTest {
         "'Received: Hello from Android!'",
     )
     web.awaitBodyText("handleReturnValue('Hello from Android!')")
+    screenshots.capture("toast-returned")
   }
 
   @Test
@@ -63,6 +70,7 @@ class WebViewBridgeE2eTest {
     web.awaitBodyText(Build.MODEL)
     web.awaitBodyText(Build.MANUFACTURER)
     web.awaitBodyText(context.packageName)
+    screenshots.capture("device-info")
   }
 
   @Test
@@ -71,6 +79,7 @@ class WebViewBridgeE2eTest {
 
     // 既定の遅延は 1000ms。ネイティブが postDelayed で呼び返すまで待つ
     web.awaitBodyText("後に応答しました", CALLBACK_TIMEOUT_MILLIS)
+    screenshots.capture("callback-resolved")
   }
 
   @Test
@@ -88,6 +97,7 @@ class WebViewBridgeE2eTest {
       "document.documentElement.className.indexOf('$toggled') >= 0",
     )
     awaitThemePreference(preference, AppTheme.from(toggled))
+    screenshots.capture("theme-$toggled")
 
     // 端末に配色が残ると次のテストや手動確認の前提が変わるため、元に戻す
     web.clickSelector("button[aria-label='カラーテーマを切り替える']")
@@ -108,6 +118,9 @@ class WebViewBridgeE2eTest {
         "typeof window.AndroidInterface === 'object'",
       RELOAD_TIMEOUT_MILLIS,
     )
+    // 読み直しが最後まで終わること（ネイティブの読み込み中表示が消える）
+    web.awaitTrue("再読み込みの完了", "document.readyState === 'complete'", RELOAD_TIMEOUT_MILLIS)
+    screenshots.capture("reloaded")
   }
 
   /** `setAppTheme()` はメインスレッドに post されるため、反映されるまで少し待つ。 */

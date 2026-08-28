@@ -3,6 +3,7 @@ package cn.gekal.android.myapplicationwebviewinteractionsample
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.WebView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -124,6 +125,7 @@ class WebViewDriver private constructor(private val webView: WebView) {
     private const val EVAL_TIMEOUT_MILLIS = 5_000L
     private const val VIEW_TIMEOUT_MILLIS = 10_000L
     private const val POLL_INTERVAL_MILLIS = 250L
+    private const val SETTLE_MILLIS = 300L
     private const val NULL_LITERAL = "null"
 
     /** ラベルが一致して押せる状態のボタンをクリックする。見つからなければ false。 */
@@ -158,8 +160,18 @@ class WebViewDriver private constructor(private val webView: WebView) {
      * 満たしたときだけ出るため、操作を始めてよい合図として使える。
      */
     fun awaitDemoPage(scenario: ActivityScenario<MainActivity>): WebViewDriver {
+      // テスト中に画面が消えると、待ち合わせも画面キャプチャも当てにならなくなる
+      scenario.onActivity {
+        it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+      }
+
       val driver = WebViewDriver(awaitWebView(scenario))
       driver.awaitBodyText("接続済み", LOAD_TIMEOUT_MILLIS)
+      // 「接続済み」はハイドレーション時点で出るが、ネイティブの読み込み中表示が消えるのは
+      // onPageFinished のあと。その上から操作・撮影しないよう、読み込みの完了まで待つ。
+      driver.awaitTrue("読み込みの完了", "document.readyState === 'complete'", LOAD_TIMEOUT_MILLIS)
+      // onPageFinished から Compose が描き直すまでの 1 フレーム分を待つ
+      SystemClock.sleep(SETTLE_MILLIS)
       return driver
     }
 

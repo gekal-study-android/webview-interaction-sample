@@ -153,7 +153,18 @@ scripts/test.sh all                 # JVM ユニットテスト + 実機での E
 scripts/test.sh e2e --class cn.gekal.android.myapplicationwebviewinteractionsample.WebViewBridgeE2eTest
 ```
 
-レポートは `app/build/reports/androidTests/connected/debug/index.html` に出力されます。
+レポートと成果物の出力先:
+
+| 種類 | パス |
+| --- | --- |
+| HTML レポート | `app/build/reports/androidTests/connected/debug/index.html` |
+| 画面キャプチャ | `app/build/outputs/connected_android_test_additional_output/debugAndroidTest/connected/<device>/` |
+| logcat（テスト単位） | `app/build/outputs/androidTest-results/connected/debug/<device>/logcat-*.txt` |
+
+画面キャプチャは `ScreenshotRule` が各テストの節目で撮り、失敗時は自動で 1 枚残します。
+実行中は端末の画面を点灯したままにします（消灯するとロック画面が写り、待ち合わせも不安定になるため）。
+設定は終了時に元へ戻します。
+
 実機が要るため GitHub Actions では実行していません（CI はユニットテストと Playwright まで）。
 
 | テスト | 内容 |

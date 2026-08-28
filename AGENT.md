@@ -30,7 +30,8 @@ Android の `WebView` と JavaScript 間の相互作用をデモンストレー�
 - `app/src/androidTest/.../WebViewBridgeE2eTest.kt`: 実機でのブリッジ往復の E2E
 - `app/src/androidTest/.../NativeErrorScreenE2eTest.kt`: ネイティブのエラー画面の E2E（Compose のテスト API を使う）
 - `app/src/androidTest/.../InAppOverlayE2eTest.kt`: アプリ内オーバーレイの E2E（Compose のテストルールを入れると合成が進まないため使わない）
-- `scripts/test.sh`: テスト実行（`unit` / `e2e` / `all`）
+- `app/src/androidTest/.../ScreenshotRule.kt`: 実機 E2E の画面キャプチャ（節目 + 失敗時）。AGP が回収する出力先に保存
+- `scripts/test.sh`: テスト実行（`unit` / `e2e` / `all`）。E2E 中は端末の画面を点灯維持し、終了時に戻す
 
 ## WebView 相互作用の仕様
 - **JavaScript Interface 名**: `AndroidInterface`
