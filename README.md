@@ -189,11 +189,30 @@ scripts/test.sh all                 # JVM ユニットテスト + 実機での E
 scripts/test.sh e2e --class cn.gekal.android.myapplicationwebviewinteractionsample.WebViewBridgeE2eTest
 ```
 
-レポートと成果物の出力先:
+実行が終わると、結果・画面キャプチャ・logcat を 1 枚にまとめた HTML を自動生成します。
+テストが失敗したときも生成します（失敗時こそキャプチャとログが要るため）。
+
+```
+app/build/reports/e2e/index.html
+```
+
+| 中身 | 内容 |
+| --- | --- |
+| 結果の一覧 | テストごとの成否と所要時間。失敗があれば先頭に並べる |
+| 画面キャプチャ | テストの節目ごとの画面。クリックで原寸表示 |
+| logcat | テスト単位で、ブリッジのやり取り・ライフサイクル・失敗だけを抜粋（全文へのリンク付き） |
+
+レポートだけを作り直したいときは、テストを流し直さずに次を実行します。
+
+```shell
+scripts/e2e-report.py            # 直近の実行結果から再生成
+```
+
+元データの出力先:
 
 | 種類 | パス |
 | --- | --- |
-| HTML レポート | `app/build/reports/androidTests/connected/debug/index.html` |
+| Gradle の HTML レポート | `app/build/reports/androidTests/connected/debug/index.html` |
 | 画面キャプチャ | `app/build/outputs/connected_android_test_additional_output/debugAndroidTest/connected/<device>/` |
 | logcat（テスト単位） | `app/build/outputs/androidTest-results/connected/debug/<device>/logcat-*.txt` |
 

@@ -123,9 +123,22 @@ if [[ -n "$TEST_CLASS" ]]; then
 fi
 
 echo "▶ テストを実行します ($SCOPE): ./gradlew ${TASKS[*]} ${GRADLE_ARGS[*]:-}"
+# 失敗しても結果とキャプチャからレポートを作りたいので、ここでは終了させない
+set +e
 ./gradlew "${TASKS[@]}" ${GRADLE_ARGS[@]+"${GRADLE_ARGS[@]}"}
-echo "✅ テスト完了"
+GRADLE_STATUS=$?
+set -e
 
 if [[ "$SCOPE" != "unit" ]]; then
-  echo "   レポート: app/build/reports/androidTests/connected/debug/index.html"
+  echo "▶ レポートを生成します"
+  if ! python3 "$SCRIPT_DIR/e2e-report.py"; then
+    echo "⚠️ レポートの生成に失敗しました（テスト結果そのものは Gradle のレポートで確認できます）" >&2
+  fi
+  echo "   Gradle レポート: app/build/reports/androidTests/connected/debug/index.html"
 fi
+
+if [[ "$GRADLE_STATUS" -ne 0 ]]; then
+  echo "❌ テストに失敗しました" >&2
+  exit "$GRADLE_STATUS"
+fi
+echo "✅ テスト完了"
